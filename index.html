@@ -677,6 +677,81 @@ select:focus{border-color:var(--grn)}
   .mrow{gap:6px}
   .pn{font-size:.9rem}
 }
+
+/* ── HELP BUTTON ──────────────────────────────────── */
+#helpBtn{
+  position:fixed;bottom:22px;left:22px;z-index:800;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--bg3);border:1px solid var(--line2);
+  color:var(--tx1);font-family:var(--f-head);font-size:1.2rem;font-weight:700;
+  cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+  display:flex;align-items:center;justify-content:center;
+}
+#helpBtn:hover{background:var(--grn);color:#000;border-color:var(--grn);transform:scale(1.08)}
+
+/* ── HELP MODAL ───────────────────────────────────── */
+#helpModal{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(14px);
+  z-index:900;align-items:center;justify-content:center;padding:18px;
+}
+.helpbox{
+  background:var(--bg2);border:1px solid var(--line2);
+  border-top:2px solid var(--grn);border-radius:var(--radius);
+  padding:28px 26px;width:100%;max-width:480px;
+  max-height:88vh;overflow-y:auto;
+  animation:fadeup .25s ease;
+  box-shadow:0 24px 60px rgba(0,0,0,.7);
+  scrollbar-width:thin;scrollbar-color:var(--bg3) transparent;
+}
+.helphdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:22px;
+}
+.helplogo{
+  font-family:var(--f-head);font-size:1.15rem;font-weight:700;
+  color:var(--grn);letter-spacing:.08em;text-transform:uppercase;
+}
+.helphdr button{
+  background:transparent;border:none;color:var(--tx2);
+  font-size:1.1rem;cursor:pointer;transition:color .15s;line-height:1;
+}
+.helphdr button:hover{color:var(--tx1)}
+.helpsteps{display:flex;flex-direction:column;gap:0}
+.hstep{display:flex;gap:14px;padding:14px 0}
+.hstep-icon{font-size:1.5rem;flex-shrink:0;width:32px;text-align:center;margin-top:2px}
+.hstep-body{flex:1}
+.hstep-title{
+  font-family:var(--f-head);font-size:.95rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--tx1);
+  margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.hstep-desc{font-size:.82rem;color:var(--tx2);line-height:1.65}
+.hstep-desc strong{color:var(--tx1)}
+.hbadge{
+  font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:2px 7px;
+  border-radius:2px;font-family:var(--f-body);
+}
+.hbadge-grn{background:var(--grndim);color:var(--grn);border:1px solid rgba(24,233,110,.3)}
+.hdivider{height:1px;background:var(--line);margin:2px 0}
+.htimeline{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.htl-row{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--tx2)}
+.htl-row strong{color:var(--tx1)}
+.htl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.htl-grn{background:var(--grn)}
+.htl-amb{background:var(--amber)}
+.htl-red{background:var(--red)}
+.helpclose{
+  display:block;width:100%;margin-top:22px;
+  font-family:var(--f-head);font-size:.85rem;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  background:var(--grn);color:#000;border:none;
+  padding:12px;border-radius:var(--r2);cursor:pointer;
+  transition:filter .15s;
+}
+.helpclose:hover{filter:brightness(1.1)}
+
 </style>
 </head>
 <body>
@@ -710,7 +785,7 @@ select:focus{border-color:var(--grn)}
       <h1>FRONTIER PREDICTOR<span>Gran Prix 2026 · Pedro Juan Caballero</span></h1>
     </div>
     <div class="live-badge">EN VIVO</div>
-    <div class="fbadge"><div class="fdot" id="fdot"></div><span id="flbl">Conectando…</span></div>
+    <div class="fbadge admin-only" id="fbadge-wrap"><div class="fdot" id="fdot"></div><span id="flbl">Conectando…</span></div>
     <button class="syncbtn admin-only" id="syncBtn" onclick="doSync()">↻ SYNC</button>
   </div>
 </header>
@@ -841,25 +916,86 @@ select:focus{border-color:var(--grn)}
   </div>
 </main>
 
+<!-- HELP BUTTON (fixed) -->
+<button id="helpBtn" onclick="document.getElementById('helpModal').style.display='flex'" title="Como funciona?">?</button>
+
+<!-- HELP MODAL -->
+<div id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="helpbox">
+    <div class="helphdr">
+      <div class="helplogo">&#9817; COMO FUNCIONA</div>
+      <button onclick="document.getElementById('helpModal').style.display='none'">&#x2715;</button>
+    </div>
+    <div class="helpsteps">
+      <div class="hstep">
+        <div class="hstep-icon">&#127942;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Aposta al Campeon <span class="hbadge hbadge-grn">+5 PTS</span></div>
+          <div class="hstep-desc">Antes de que empiece la <strong>Ronda 3</strong>, elegi quien crees que va a ganar el torneo. Si acertas, sumas <strong>5 puntos</strong>. Esta apuesta se cierra antes de la tercera ronda y no se puede cambiar despues.</div>
+        </div>
+      </div>
+      <div class="hdivider"></div>
+      <div class="hstep">
+        <div class="hstep-icon">&#9817;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Predeci cada Partida <span class="hbadge hbadge-grn">+3 PTS</span></div>
+          <div class="hstep-desc">Antes de que el admin cierre cada ronda, elegi el resultado: gana Blancas, gana Negras, o Tablas. Por cada acierto sumas <strong>3 puntos</strong>.</div>
+        </div>
+      </div>
+      <div class="hdivider"></div>
+      <div class="hstep">
+        <div class="hstep-icon">&#128274;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Cierre de Apuestas</div>
+          <div class="hstep-desc">El admin cierra cada ronda <strong>antes de que empiece</strong>. Una vez cerrada, no podes modificar tus picks. El aviso de &#128274; RONDA CERRADA aparece automaticamente en pantalla.</div>
+        </div>
+      </div>
+      <div class="hdivider"></div>
+      <div class="hstep">
+        <div class="hstep-icon">&#128202;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Ranking en Tiempo Real</div>
+          <div class="hstep-desc">Los puntos se actualizan automaticamente a medida que se cargan los resultados. El ranking muestra flechas <span style="color:#18e96e">&#9650;</span> <span style="color:#e84040">&#9660;</span> indicando si subiste o bajaste posiciones respecto a la ronda anterior.</div>
+        </div>
+      </div>
+      <div class="hdivider"></div>
+      <div class="hstep">
+        <div class="hstep-icon">&#9201;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Resumen de Plazos</div>
+          <div class="hstep-desc">
+            <div class="htimeline">
+              <div class="htl-row"><span class="htl-dot htl-grn"></span><span>Apuesta al <strong>campeon</strong> &#8594; hasta antes de Ronda 3</span></div>
+              <div class="htl-row"><span class="htl-dot htl-amb"></span><span>Picks de <strong>partidas</strong> &#8594; hasta antes de cada ronda</span></div>
+              <div class="htl-row"><span class="htl-dot htl-red"></span><span>Una vez cerrado &#8594; <strong>no se puede modificar</strong></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="helpclose" onclick="document.getElementById('helpModal').style.display='none'">ENTENDIDO &#8594;</button>
+  </div>
+</div>
+
 <script>
 // ═══ JUGADORES ════════════════════════════════════════════
 const PL=[
-  {no:1,name:'Cantero, Rodolfo',elo:2204,fed:'PAR',title:'CM'},
-  {no:2,name:'Viñales, Enzo',elo:2199,fed:'PAR',title:'FM'},
-  {no:3,name:'Mayeregger, Arnold',elo:2170,fed:'PAR',title:'NM'},
-  {no:4,name:'Neves, Leonardo',elo:2141,fed:'BRA',title:'NM'},
-  {no:5,name:'Allo Collante, Enrique',elo:2116,fed:'PAR',title:''},
-  {no:6,name:'De Oliveira, Jairo',elo:2023,fed:'BRA',title:'NM'},
-  {no:7,name:'Serafim, Guilherme',elo:1989,fed:'BRA',title:''},
-  {no:8,name:'Cristino, Felipe',elo:1976,fed:'BRA',title:'NM'},
-  {no:9,name:'Ramalho, Lucas',elo:1948,fed:'BRA',title:''},
-  {no:10,name:'Fedrizzi, Roberto',elo:1931,fed:'BRA',title:'NM'},
-  {no:11,name:'Aguilera, Pedro',elo:1879,fed:'BRA',title:'AFM'},
-  {no:12,name:'Duailibi, Ricardo',elo:1875,fed:'BRA',title:'NM'},
-  {no:13,name:'Deus Filho, Joaquim',elo:1840,fed:'BRA',title:'NM'},
-  {no:14,name:'Vilela, Vitor',elo:1837,fed:'BRA',title:''},
-  {no:15,name:'Arruda Filho, Ivo',elo:1805,fed:'BRA',title:'NM'},
-  {no:16,name:'Areco Alvarenga, Eric',elo:1760,fed:'PAR',title:''},
+  {no:1,name:'Cantero, Rodolfo',elo:2204,fed:'PAR',title:'CM',flag:'🇵🇾'},
+  {no:2,name:'Viñales, Enzo',elo:2199,fed:'PAR',title:'FM',flag:'🇵🇾'},
+  {no:3,name:'Mayeregger, Arnold',elo:2170,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:4,name:'Neves, Leonardo',elo:2141,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:5,name:'Allo Collante, Enrique',elo:2116,fed:'PAR',title:'',flag:'🇵🇾'},
+  {no:6,name:'De Oliveira, Jairo',elo:2023,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:7,name:'Serafim, Guilherme',elo:1989,fed:'PAR',title:'',flag:'🇵🇾'},
+  {no:8,name:'Cristino, Felipe',elo:1976,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:9,name:'Ramalho, Lucas',elo:1948,fed:'PAR',title:'',flag:'🇵🇾'},
+  {no:10,name:'Fedrizzi, Roberto',elo:1931,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:11,name:'Aguilera, Pedro',elo:1879,fed:'PAR',title:'AFM',flag:'🇵🇾'},
+  {no:12,name:'Duailibi, Ricardo',elo:1875,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:13,name:'Deus Filho, Joaquim',elo:1840,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:14,name:'Vilela, Vitor',elo:1837,fed:'PAR',title:'',flag:'🇵🇾'},
+  {no:15,name:'Arruda Filho, Ivo',elo:1805,fed:'PAR',title:'NM',flag:'🇵🇾'},
+  {no:16,name:'Areco Alvarenga, Eric',elo:1760,fed:'PAR',title:'',flag:'🇵🇾'},
 ];
 const RDATES={1:'27 Feb',2:'27 Feb',3:'28 Feb',4:'28 Feb',5:'1 Mar',6:'1 Mar',7:'1 Mar'};
 const DEMO=[
@@ -872,6 +1008,7 @@ const ADMIN_USER='admin'; // ← cambiá si querés otro nombre de admin
 const TID='1308555';
 const pn=no=>{const p=PL.find(x=>x.no===no);return p?p.name.split(',')[0].trim():`#${no}`;};
 const pf=no=>{const p=PL.find(x=>x.no===no);return p?p.name:`#${no}`;};
+const pflag=no=>{const p=PL.find(x=>x.no===no);return p?.flag||'🇵🇾';};
 
 // ═══ STATE ════════════════════════════════════════════════
 let CU=null,allBets={},results={},locks={},settings={},liveR=DEMO,selChamp=null,authMode='login',prevRank=null,curR=1;
@@ -919,22 +1056,18 @@ function updateAdminVisibility() {
   adminElements.forEach(el => {
     if (isUserAdmin) {
       el.classList.remove('admin-only');
-      // Casos especiales: el modal de admin y el tab admin tienen estilos específicos
       if (el.id === 'tab-admin') el.style.display = '';
-      if (el.id === 'corswarn') el.style.display = 'none'; // se maneja aparte
+      if (el.id === 'corswarn') el.style.display = 'none';
+      if (el.id === 'fbadge-wrap') el.style.display = 'flex';
     } else {
       el.classList.add('admin-only');
     }
   });
   
-  // Mostrar/ocultar el botón SYNC en el header
   const syncBtn = document.getElementById('syncBtn');
   if (syncBtn) {
-    if (isUserAdmin) {
-      syncBtn.classList.remove('admin-only');
-    } else {
-      syncBtn.classList.add('admin-only');
-    }
+    if (isUserAdmin) syncBtn.classList.remove('admin-only');
+    else syncBtn.classList.add('admin-only');
   }
 }
 
@@ -997,7 +1130,7 @@ function renderUbar(){
 }
 
 // ═══ CHAMPION ═════════════════════════════════════════════
-function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${pn(p.no)}</span><span class="celo">${p.elo}</span></div>`).join('');}
+function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${p.flag||'🇵🇾'} ${pn(p.no)}</span><span class="celo">${p.elo}</span></div>`).join('');}
 function selC(el,no){if(locks.champion)return toast('Las apuestas al campeón están cerradas.');selChamp=no;document.querySelectorAll('.co').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
 async function betChampion(){
   if(!CU)return toast('Iniciá sesión.');
@@ -1044,6 +1177,7 @@ function matchCard(g,rlk){
   const rl=res==='white'?'1-0':res==='black'?'0-1':res==='draw'?'½-½':'—';
   const rc=res==='white'?'ww':res==='black'?'bw':res==='draw'?'dr':'nd';
   const wl=pn(g.white),bl=pn(g.black);
+  const wfl=pflag(g.white),bfl=pflag(g.black);
   const we=PL.find(x=>x.no===g.white)?.elo||'—',be=PL.find(x=>x.no===g.black)?.elo||'—';
   const dis=past||rlk;
   const pbc=t=>{if(!myP)return'';if(myP===t&&res)return res===t?'ok':'bad';if(myP===t&&!res)return t==='white'?'sw':t==='draw'?'sd':'sb';return'';};
@@ -1057,9 +1191,9 @@ function matchCard(g,rlk){
   return`<div class="pair${myP?' hpred':''}${cor?' cor':''}${wr?' wr':''}"><div class="pinner">
     <div class="brow"><span class="bnum">Tablero ${g.key.split('_')[0].replace('r','Ronda ')}</span><span class="rtag ${rc}">${rl}</span></div>
     <div class="mrow">
-      <div class="ps"><div class="pn">${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span></div></div>
+      <div class="ps"><div class="pn">${wfl} ${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span></div></div>
       <div class="vs">vs</div>
-      <div class="ps r"><div class="pn">${bl}</div><div class="psub"><span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
+      <div class="ps r"><div class="pn">${bfl} ${bl}</div><div class="psub"><span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
     </div>
     <div class="plabel">Tu predicción</div>
     <div class="prow">
@@ -1131,7 +1265,7 @@ function renderLB(){
   lb.innerHTML=sorted.map(([u,v],i)=>`<div class="lbrow">
     <div class="lbpos ${pc[i]||''}">${i+1}</div>
     <div class="lbbody"><div class="lbinfo">
-      <div class="lbpname">${esc(u)}${u===CU?'<span class="ytag">VOS</span>':''}</div>
+      <div class="lbpname">🇵🇾 ${esc(u)}${u===CU?'<span class="ytag">VOS</span>':''}</div>
       <div class="lbsub">${v.hits} aciertos</div>
       <div class="lbbar"><div class="lbbarfill" style="width:${(v.pts/max)*100}%"></div></div>
     </div></div>
@@ -1158,7 +1292,7 @@ function renderStand() {
     <div class="stlist">${PL.map((p,i)=>`
     <div class="strow">
       <div class="stpos${i<3?' top':''}">${i+1}</div>
-      <div><div class="stname">${p.name.split(',')[0]}</div><div class="stmeta">${p.fed}${p.title?' · '+p.title:''}</div></div>
+      <div><div class="stname">${p.flag||'🇵🇾'} ${p.name.split(',')[0]}</div><div class="stmeta">${p.fed}${p.title?' · '+p.title:''}</div></div>
       <div class="stelo">${p.elo}</div>
       <div class="stsc" style="color:var(--gr)">—</div>
     </div>`).join('')}</div>`;
@@ -1172,7 +1306,7 @@ function renderStandFromData(stand) {
     <div class="stlist">${stand.map(p=>`
     <div class="strow">
       <div class="stpos${p.rank<=3?' top':''}">${p.rank}</div>
-      <div><div class="stname">${(p.name||'').split(',')[0]||p.name}</div><div class="stmeta">${p.fed||''}</div></div>
+      <div><div class="stname">🇵🇾 ${(p.name||'').split(',')[0]||p.name}</div><div class="stmeta">${p.fed||''}</div></div>
       <div class="stelo">${p.rtg||'—'}</div>
       <div class="stsc">${p.pts||'—'}</div>
     </div>`).join('')}</div>`;
