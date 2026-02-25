@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FRONTIER PREDICTOR 2026</title>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  // ⚠️ REEMPLAZÁ con tu propia config de Firebase Realtime Database
+  const cfg = {
+    apiKey:"TU_API_KEY",
+    authDomain:"TU_PROYECTO.firebaseapp.com",
+    databaseURL:"https://TU_PROYECTO-default-rtdb.firebaseio.com",
+    projectId:"TU_PROYECTO",
+    storageBucket:"TU_PROYECTO.firebasestorage.app",
+    messagingSenderId:"TU_SENDER_ID",
+    appId:"TU_APP_ID"
+  };
+  const db=getDatabase(initializeApp(cfg));
+  const r=p=>ref(db,p);
+  window._fb={
+    getUser:     async u=>(await get(r(`users/${u}`))).val(),
+    createUser:  (u,h)=>set(r(`users/${u}`),{hash:h,created:Date.now()}),
+    setChampBet: (u,p)=>set(r(`bets/${u}/champion`),{player:p,ts:Date.now()}),
+    setMatchBet: (u,k,pk)=>set(r(`bets/${u}/matches/${k}`),{pick:pk,ts:Date.now()}),
+    onBets:      cb=>onValue(r('bets'),s=>cb(s.val()||{})),
+    setChampResult: p=>set(r('results/champion'),p),
+    setMatchResult: (k,v)=>set(r(`results/matches/${k}`),v),
+    onResults:   cb=>onValue(r('results'),s=>cb(s.val()||{})),
+    setRoundLock:(rn,l)=>set(r(`locks/rounds/${rn}`),l),
+    setChampLock:l=>set(r('locks/champion'),l),
+    onLocks:     cb=>onValue(r('locks'),s=>cb(s.val()||{})),
+    resetAll:    ()=>Promise.all([set(r('bets'),null),set(r('results'),null),set(r('locks'),null),set(r('snapshots'),null)]),
+    saveSnapshot:snap=>set(r('snapshots/prev'),snap),
+    onSnapshot:  cb=>onValue(r('snapshots/prev'),s=>cb(s.val()||null)),
+    onSettings:  cb=>onValue(r('settings'),s=>cb(s.val()||{})),
+    setSetting:  (k,v)=>set(r(`settings/${k}`),v),
+    setPairings: (rn,d)=>set(r(`pairings/r${rn}`),d),
+    onPairings:  cb=>onValue(r('pairings'),s=>cb(s.val()||{})),
+  };
+  window._fbReady=true;
+  document.dispatchEvent(new Event('fb'));
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Core palette — sports betting dark */
+  --bg:     #0e1117;   /* page background */
+  --bg2:    #151921;   /* card background */
+  --bg3:    #1c2230;   /* elevated surface */
+  --bg4:    #222b3a;   /* hover state */
+  --line:   rgba(255,255,255,.06);
+  --line2:  rgba(255,255,255,.12);
+
+  /* Accents */
+  --grn:    #18e96e;   /* primary accent — live green */
+  --grndim: rgba(24,233,110,.12);
+  --grng:   rgba(24,233,110,.06);
+  --amber:  #f0b429;
+  --red:    #e84040;
+  --reddim: rgba(232,64,64,.12);
+  --blue:   #4f8ef7;
+
+  /* Text */
+  --tx1:   #f0f4ff;
+  --tx2:   #8892a4;
+  --tx3:   #4a5568;
+
+  /* Fonts */
+  --f-head: 'Oswald', sans-serif;
+  --f-body: 'DM Sans', sans-serif;
+
+  /* Misc */
+  --radius: 6px;
+  --r2:     4px;
+}
+
+/* ── RESET ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--tx1);
+  font-family:var(--f-body);
+  font-size:14px;
+  min-height:100vh;
+  overflow-x:hidden;
+  /* subtle diagonal grid texture */
+  background-image:
+    linear-gradient(rgba(24,233,110,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(24,233,110,.015) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+/* ── AUTH SCREEN ───────────────────────────────────── */
+#auth{
+  position:fixed;inset:0;
+  background:rgba(10,13,20,.97);
+  backdrop-filter:blur(16px);
+  z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.abox{
+  background:var(--bg2);
+  border:1px solid var(--line2);
+  border-top:2px solid var(--grn);
+  border-radius:var(--radius);
+  padding:36px 30px;
+  width:100%;max-width:400px;
+  animation:fadeup .3s ease;
+  box-shadow:0 24px 60px rgba(0,0,0,.6),0 0 0 1px rgba(24,233,110,.08);
+}
+@keyframes fadeup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.alogo{
+  font-family:var(--f-head);
+  font-size:1.75rem;font-weight:700;
+  color:var(--grn);
+  text-transform:uppercase;letter-spacing:.06em;line-height:1;
+  margin-bottom:2px;
+}
+.alogo small{
+  display:block;font-size:.6rem;font-family:var(--f-body);
+  font-weight:500;letter-spacing:.14em;color:var(--tx2);margin-top:4px;
+}
+.abox h2{font-family:var(--f-head);font-size:1.3rem;font-weight:600;letter-spacing:.04em;margin:14px 0 3px;color:var(--tx1)}
+.abox .asub{font-size:.8rem;color:var(--tx2);margin-bottom:22px;line-height:1.6}
+#reg-notice{
+  font-size:.73rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--reddim);border:1px solid rgba(232,64,64,.3);
+  padding:7px 11px;color:var(--red);margin-bottom:12px;
+  border-radius:var(--r2);display:none;
+}
+.atabs{display:flex;gap:2px;margin-bottom:18px;background:var(--bg);border-radius:var(--r2);padding:3px}
+.atab{
+  flex:1;padding:7px;background:transparent;border:none;
+  color:var(--tx2);font-family:var(--f-body);font-size:.78rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.08em;cursor:pointer;
+  transition:all .15s;border-radius:3px;text-align:center;
+}
+.atab:hover{color:var(--tx1)}
+.atab.on{background:var(--bg3);color:var(--grn)}
+.flabel{
+  display:block;font-size:.65rem;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--tx2);margin-bottom:5px;margin-top:14px;
+}
+.field{
+  width:100%;background:var(--bg);border:1px solid var(--line2);
+  border-radius:var(--r2);color:var(--tx1);padding:10px 13px;
+  font-family:var(--f-body);font-size:.92rem;font-weight:500;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.field:focus{border-color:var(--grn);box-shadow:0 0 0 3px var(--grndim)}
+.field::placeholder{color:var(--tx3)}
+.aerr{font-size:.75rem;font-weight:600;color:var(--red);margin-top:8px;min-height:16px}
+
+/* ── BUTTONS ───────────────────────────────────────── */
+.btn{
+  font-family:var(--f-head);font-size:.8rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  padding:11px 20px;transition:all .15s;border:none;
+  border-radius:var(--r2);
+}
+.bprimary{
+  background:var(--grn);color:#000;
+  display:block;width:100%;margin-top:14px;font-weight:700;
+}
+.bprimary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.bprimary:active{transform:translateY(0)}
+.bghost{
+  background:transparent;border:1px solid var(--line2);
+  color:var(--tx2);padding:7px 13px;font-size:.7rem;
+}
+.bghost:hover{border-color:var(--line2);color:var(--tx1);background:var(--bg3)}
+.bdanger{background:var(--reddim);border:1px solid rgba(232,64,64,.3);color:var(--red)}
+.bdanger:hover{background:rgba(232,64,64,.2)}
+.bfull{width:100%}
+.bsm{padding:5px 11px;font-size:.68rem}
+
+/* ── HEADER ────────────────────────────────────────── */
+header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(14,17,23,.95);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.htop{display:flex;align-items:center;height:54px;padding:0 16px;gap:12px}
+.hbrand{display:flex;align-items:center;gap:9px;margin-right:auto}
+/* Live pulse icon */
+.hbrand::before{
+  content:'♟';font-size:1.1rem;color:var(--grn);
+  animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 8px var(--grn)}}
+.hbrand h1{
+  font-family:var(--f-head);font-size:1.1rem;font-weight:700;
+  letter-spacing:.08em;color:var(--tx1);text-transform:uppercase;line-height:1;
+}
+.hbrand h1 span{
+  display:block;font-size:.5rem;font-family:var(--f-body);font-weight:500;
+  letter-spacing:.14em;color:var(--tx2);margin-top:2px;text-transform:uppercase;
+}
+/* Live badge */
+.live-badge{
+  display:flex;align-items:center;gap:5px;
+  background:var(--grndim);border:1px solid rgba(24,233,110,.25);
+  border-radius:30px;padding:3px 9px;
+  font-size:.63rem;font-weight:700;color:var(--grn);letter-spacing:.1em;text-transform:uppercase;
+}
+.live-badge::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--grn);animation:blink 1.2s ease infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.fbadge{
+  display:flex;align-items:center;gap:6px;
+  font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);
+}
+.fdot{width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:blink 1.5s infinite}
+.fdot.on{background:var(--grn)}.fdot.err{background:var(--red);animation:none}
+.syncbtn{
+  font-family:var(--f-body);font-size:.72rem;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;padding:6px 12px;
+  border:1px solid var(--line2);background:transparent;color:var(--tx2);
+  transition:all .15s;border-radius:var(--r2);
+}
+.syncbtn:hover{border-color:var(--grn);color:var(--grn);background:var(--grndim)}
+
+/* ── NAV ───────────────────────────────────────────── */
+nav{
+  display:flex;background:var(--bg2);
+  border-bottom:1px solid var(--line);
+  padding:0 12px;overflow-x:auto;gap:2px;
+}
+nav::-webkit-scrollbar{display:none}
+.tab{
+  font-family:var(--f-body);font-size:.78rem;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--tx2);background:none;border:none;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  padding:11px 14px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.tab:hover{color:var(--tx1)}.tab.on{color:var(--grn);border-bottom-color:var(--grn)}
+
+/* ── LAYOUT ────────────────────────────────────────── */
+main{max-width:1060px;margin:0 auto;padding:18px 14px}
+.view{display:none;padding-bottom:60px}.view.on{display:block}
+
+/* ── USER BAR ──────────────────────────────────────── */
+.ubar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--bg2);
+  border:1px solid var(--line);border-radius:var(--radius);
+  margin-bottom:16px;flex-wrap:wrap;
+}
+.uname{
+  font-family:var(--f-head);font-size:.95rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--grn);
+}
+.uname small{color:var(--tx2);font-size:.6rem;font-weight:500;letter-spacing:.1em;margin-left:5px;font-family:var(--f-body)}
+.usp{flex:1}
+
+/* ── SECTION HEADER ────────────────────────────────── */
+.sh{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line);
+}
+.sh h2{
+  font-family:var(--f-head);font-size:1.5rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;line-height:1;color:var(--tx1);
+}
+.sh h2 em{color:var(--grn);font-style:normal}
+.chip{
+  font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:2px;font-family:var(--f-body);
+}
+.cred{background:var(--reddim);color:var(--red);border:1px solid rgba(232,64,64,.3)}
+.cout{background:var(--grndim);border:1px solid rgba(24,233,110,.3);color:var(--grn)}
+.cgray{background:var(--bg3);color:var(--tx2);border:1px solid var(--line)}
+.cgreen{background:var(--grndim);border:1px solid rgba(24,233,110,.3);color:var(--grn)}
+
+/* ── BANNERS ───────────────────────────────────────── */
+.ibar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:9px;
+  background:var(--bg2);border-left:2px solid var(--grn);
+  padding:9px 14px;margin-bottom:14px;font-size:.8rem;color:var(--tx2);
+  border-radius:0 var(--r2) var(--r2) 0;
+}
+.ibar strong{color:var(--tx1)}.ibar .pts{font-family:var(--f-head);font-weight:700;font-size:.95rem;color:var(--grn)}
+.lkbanner{
+  display:flex;align-items:center;gap:7px;
+  background:var(--reddim);border:1px solid rgba(232,64,64,.25);
+  padding:8px 13px;margin-bottom:9px;
+  font-size:.75rem;font-weight:600;letter-spacing:.04em;color:var(--red);
+  text-transform:uppercase;border-radius:var(--r2);
+}
+.wbox{background:var(--reddim);border:1px solid rgba(232,64,64,.25);padding:11px 15px;margin-bottom:13px;font-size:.8rem;color:var(--tx2);border-radius:var(--r2)}
+.wbox b{color:var(--red);display:block;margin-bottom:3px;font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.wbox code{font-size:.75rem;color:var(--tx1);background:var(--bg);padding:1px 5px;border-radius:2px}
+
+/* ── ROUND STRIP ───────────────────────────────────── */
+.rstrip{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.rb{
+  font-family:var(--f-body);font-size:.73rem;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;background:var(--bg2);border:1px solid var(--line);
+  color:var(--tx2);padding:6px 14px;cursor:pointer;transition:all .15s;
+  border-radius:var(--r2);
+}
+.rb:hover{border-color:var(--line2);color:var(--tx1)}
+.rb.active{background:var(--grn);border-color:var(--grn);color:#000;font-weight:700}
+.rb.done{border-color:rgba(24,233,110,.3);color:var(--grn)}
+.rb.done::after{content:' ✓';font-size:.65rem}
+.rb.lkr{border-color:rgba(232,64,64,.3);color:rgba(232,64,64,.7)}
+.rb.fut{opacity:.25;cursor:default}
+
+/* ── PAIRING CARD — core ───────────────────────────── */
+.pair{
+  background:var(--bg2);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  margin-bottom:6px;position:relative;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+.pair:hover{border-color:var(--line2)}
+.pair::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--line);transition:background .2s;border-radius:3px 0 0 3px;
+}
+.pair.hpred::before{background:var(--tx2)}
+.pair.cor::before{background:var(--grn)}
+.pair.cor{box-shadow:0 0 0 1px rgba(24,233,110,.1)}
+.pair.wr::before{background:var(--red)}
+.pinner{padding:13px 15px 13px 19px}
+.brow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.bnum{
+  font-size:.62rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--tx3);
+}
+.rtag{font-family:var(--f-head);font-size:.78rem;font-weight:600;letter-spacing:.05em;padding:3px 9px;border-radius:2px}
+.rtag.ww{background:rgba(240,255,240,.1);color:#e8ffe8;border:1px solid rgba(255,255,255,.15)}
+.rtag.bw{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);color:var(--tx2)}
+.rtag.dr{border:1px solid rgba(79,142,247,.3);color:var(--blue)}
+.rtag.nd{color:var(--tx3);font-size:.65rem}
+
+/* Match row — VS layout */
+.mrow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px}
+.ps{}.ps.r{text-align:right}
+.pn{
+  font-family:var(--f-head);font-size:1rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.03em;line-height:1.15;color:var(--tx1);
+}
+.psub{font-size:.67rem;color:var(--tx2);margin-top:3px;display:flex;align-items:center;gap:5px}
+.ps.r .psub{justify-content:flex-end}
+.pelo{
+  font-family:var(--f-head);font-size:.8rem;font-weight:600;color:var(--amber);
+  background:rgba(240,180,41,.08);padding:1px 5px;border-radius:2px;
+}
+.pip{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pipw{background:#fff}.pipb{background:var(--tx3);border:1px solid var(--tx2)}
+
+/* VS divider */
+.vs{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-family:var(--f-head);font-size:.62rem;font-weight:600;
+  letter-spacing:.1em;color:var(--tx3);text-align:center;
+}
+.vs::before,.vs::after{
+  content:'';display:block;width:1px;height:14px;
+  background:linear-gradient(to bottom,transparent,var(--line),transparent);
+}
+
+/* Result bar */
+.rbar{
+  padding:7px 12px;font-size:.77rem;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  border-top:1px solid var(--line);font-family:var(--f-body);
+}
+.rbar.rw{background:rgba(24,233,110,.06);color:var(--grn)}
+.rbar.rd{background:rgba(79,142,247,.06);color:var(--blue)}
+.rbar.rl{background:var(--reddim);color:var(--red)}
+.vok{color:var(--grn)}.vbad{color:var(--red)}
+
+/* Pick buttons — styled as odds */
+.plabel{font-size:.6rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px}
+.prow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.pb{
+  font-family:var(--f-body);font-size:.75rem;font-weight:600;letter-spacing:.03em;
+  background:var(--bg3);border:1px solid var(--line);color:var(--tx2);
+  padding:9px 4px;text-align:center;cursor:pointer;
+  transition:all .15s;border-radius:var(--r2);
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+.pb span.odds{font-family:var(--f-head);font-size:.9rem;font-weight:600;color:var(--amber);display:block}
+.pb:hover:not(:disabled){
+  border-color:var(--grn);color:var(--tx1);
+  background:var(--grndim);
+}
+.pb:disabled{opacity:.3;cursor:not-allowed}
+/* selected states */
+.pb.sw{background:var(--grndim);border-color:var(--grn);color:var(--grn)}
+.pb.sw .odds{color:var(--grn)}
+.pb.sd{background:rgba(79,142,247,.08);border-color:var(--blue);color:var(--blue)}
+.pb.sd .odds{color:var(--blue)}
+.pb.sb{background:rgba(255,255,255,.05);border-color:var(--tx2);color:var(--tx1)}
+.pb.sb .odds{color:var(--tx1)}
+/* result feedback */
+.pb.ok{background:rgba(24,233,110,.1);border-color:var(--grn);color:var(--grn)}
+.pb.bad{background:var(--reddim);border-color:var(--red);color:var(--red)}
+.nouser{font-size:.73rem;font-weight:600;letter-spacing:.06em;color:var(--tx2);text-transform:uppercase}
+
+/* ── CHAMPION SECTION ──────────────────────────────── */
+.champhero{
+  background:var(--bg2);border:1px solid var(--line);
+  border-radius:var(--radius);padding:20px 22px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+}
+.champhero::after{
+  content:'♛';position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  font-size:4rem;opacity:.04;pointer-events:none;color:var(--grn);
+}
+.champhero h3{
+  font-family:var(--f-head);font-size:1.25rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;color:var(--tx1);
+}
+.champhero p{font-size:.8rem;color:var(--tx2);line-height:1.5}
+
+/* Champion picker grid */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px}
+.co{
+  display:flex;align-items:center;gap:9px;padding:10px 12px;
+  background:var(--bg3);border:1px solid var(--line);
+  cursor:pointer;transition:all .15s;border-radius:var(--r2);
+}
+.co:hover{border-color:var(--line2);background:var(--bg4)}
+.co.sel{
+  border-color:var(--grn);background:var(--grndim);
+  box-shadow:0 0 0 1px rgba(24,233,110,.15);
+}
+.co.lkc{pointer-events:none;opacity:.35}
+.cseed{font-size:.68rem;font-weight:600;color:var(--tx3);width:18px;text-align:center;font-family:var(--f-head)}
+.cname{font-family:var(--f-head);font-size:.88rem;font-weight:500;text-transform:uppercase;flex:1;line-height:1.15;color:var(--tx1)}
+.celo{
+  font-family:var(--f-head);font-size:.75rem;font-weight:600;color:var(--amber);
+  background:rgba(240,180,41,.08);padding:1px 5px;border-radius:2px;
+}
+.mychbox{
+  background:var(--grndim);border:1px solid rgba(24,233,110,.2);
+  padding:11px 13px;margin-top:11px;border-radius:var(--r2);
+}
+.mychbox .cl{
+  font-size:.6rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--tx2);margin-bottom:4px;
+}
+.mychbox .cn{
+  font-family:var(--f-head);font-size:.95rem;font-weight:600;
+  text-transform:uppercase;color:var(--grn);
+}
+.rbb{
+  display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;padding:3px 8px;margin-top:5px;border-radius:2px;
+}
+.rbb.won{background:rgba(24,233,110,.12);color:var(--grn)}
+.rbb.lost{background:var(--reddim);color:var(--red)}
+.rbb.pend{background:rgba(78,96,128,.1);color:var(--tx2)}
+.ccfm{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
+
+/* ── LEADERBOARD ───────────────────────────────────── */
+.lbwrap{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.lbrow{
+  display:flex;align-items:stretch;
+  border-bottom:1px solid var(--line);transition:background .12s;
+}
+.lbrow:last-child{border-bottom:none}
+.lbrow:hover{background:rgba(255,255,255,.02)}
+.lbpos{
+  display:flex;align-items:center;justify-content:center;
+  width:50px;flex-shrink:0;
+  font-family:var(--f-head);font-size:1.5rem;font-weight:600;color:var(--tx2);
+}
+.lbpos.p1{background:var(--grndim);color:var(--grn)}
+.lbpos.p2{color:var(--tx1)}
+.lbbody{flex:1;padding:11px 13px;display:flex;align-items:center;gap:9px}
+.lbinfo{flex:1}
+.lbpname{font-family:var(--f-head);font-size:.97rem;font-weight:500;text-transform:uppercase;letter-spacing:.04em;line-height:1;color:var(--tx1)}
+.lbsub{font-size:.68rem;color:var(--tx2);margin-top:3px}
+.lbbar{height:2px;background:var(--line);margin-top:6px;border-radius:1px}
+.lbbarfill{height:100%;background:var(--grn);transition:width .9s ease;border-radius:1px}
+.lbsc{text-align:right;padding:11px 14px 11px 0;display:flex;flex-direction:column;justify-content:center}
+.lbpts{font-family:var(--f-head);font-size:1.8rem;font-weight:700;line-height:1;color:var(--tx1)}
+.lbptsl{font-size:.56rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2)}
+.lbmov{display:flex;align-items:center;justify-content:flex-end;padding:0 10px 0 0}
+.mov{
+  display:inline-flex;align-items:center;gap:2px;
+  font-size:.68rem;font-weight:600;padding:3px 5px;
+  white-space:nowrap;line-height:1;border-radius:2px;
+}
+.mov.up{background:rgba(24,233,110,.1);color:var(--grn)}
+.mov.dn{background:var(--reddim);color:var(--red)}
+.mov.eq{background:var(--bg3);color:var(--tx2);font-size:.62rem}
+.mov.nw{background:var(--bg3);color:var(--tx2);font-size:.6rem}
+.ytag{
+  font-size:.55rem;font-weight:700;letter-spacing:.08em;
+  background:var(--grn);color:#000;padding:2px 5px;margin-left:5px;
+  vertical-align:middle;border-radius:2px;
+}
+.ptsl{
+  display:flex;gap:16px;margin-top:10px;
+  padding:10px 14px;background:var(--bg2);
+  border:1px solid var(--line);border-radius:var(--radius);
+}
+.ptsi{font-size:.77rem;font-weight:500;color:var(--tx2)}
+.ptsi strong{color:var(--grn);font-size:.9rem;font-weight:700}
+
+/* ── MY BETS TABLE ─────────────────────────────────── */
+.bstbl{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:13px}
+.bshdr,.bsrow{display:grid;grid-template-columns:1fr 115px 115px 48px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.bshdr{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);background:var(--bg3)}
+.bsrow:last-child{border-bottom:none}.bsrow:hover{background:rgba(255,255,255,.02)}
+.bsmatch{font-size:.85rem;font-weight:500;line-height:1.4;color:var(--tx1)}
+.bsrnd{font-size:.63rem;color:var(--tx2);margin-top:2px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.bspick{font-size:.78rem;font-weight:600;color:var(--tx2);letter-spacing:.03em;text-transform:uppercase;align-self:center}
+.bsres{font-size:.78rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;align-self:center}
+.bspts{font-family:var(--f-head);font-size:.95rem;font-weight:700;color:var(--grn);text-align:right;align-self:center}
+.sboxes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.sbox{
+  background:var(--bg2);border:1px solid var(--line);
+  padding:14px 16px;text-align:center;flex:1;min-width:75px;
+  border-radius:var(--radius);
+}
+.sbox .sv{font-family:var(--f-head);font-size:1.9rem;font-weight:700;color:var(--tx1)}
+.sbox .sl{font-size:.6rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);margin-top:4px}
+
+/* ── STANDINGS ─────────────────────────────────────── */
+.stlist{display:flex;flex-direction:column;gap:3px}
+.strow{
+  display:grid;grid-template-columns:42px 1fr 65px 52px;
+  align-items:center;gap:7px;padding:10px 14px;
+  background:var(--bg2);border:1px solid var(--line);
+  transition:border-color .15s;border-radius:var(--r2);
+}
+.strow:hover{border-color:var(--line2)}
+.stpos{font-family:var(--f-head);font-size:1.2rem;font-weight:600;color:var(--tx2);text-align:center}
+.stpos.top{color:var(--grn)}
+.stname{font-family:var(--f-head);font-size:.9rem;font-weight:500;text-transform:uppercase;letter-spacing:.02em;color:var(--tx1)}
+.stmeta{font-size:.67rem;color:var(--tx2)}
+.stelo{font-family:var(--f-head);font-size:.8rem;font-weight:600;color:var(--amber);text-align:right}
+.stsc{font-family:var(--f-head);font-size:1.1rem;font-weight:700;text-align:right;color:var(--tx1)}
+
+/* ── ADMIN PANEL ───────────────────────────────────── */
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:8px;margin-bottom:20px}
+.acard{background:var(--bg2);border:1px solid var(--line);padding:15px 17px;border-radius:var(--radius)}
+.acard h3{
+  font-size:.62rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tx2);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--line);
+}
+.stline{
+  display:flex;justify-content:space-between;
+  font-size:.77rem;font-weight:500;color:var(--tx2);
+  padding:3px 0;letter-spacing:.03em;text-transform:uppercase;
+}
+.stline span{color:var(--tx1)}
+select{
+  width:100%;background:var(--bg3);border:1px solid var(--line);color:var(--tx1);
+  padding:8px 10px;font-family:var(--f-body);font-size:.85rem;font-weight:500;outline:none;
+  cursor:pointer;margin-bottom:7px;border-radius:var(--r2);
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5568'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;
+  transition:border-color .15s;
+}
+select option{background:#1c2230}
+select:focus{border-color:var(--grn)}
+.arblock{margin-bottom:16px}
+.arblhdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--line);
+  flex-wrap:wrap;gap:7px;
+}
+.arblhdr h4{
+  font-size:.68rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--grn);margin:0;
+}
+.lktog{display:flex;align-items:center;gap:5px}
+.ltbtn{
+  padding:4px 11px;font-size:.64rem;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .15s;
+  white-space:nowrap;border-radius:var(--r2);
+}
+.ltbtn.lkit{background:var(--reddim);border-color:rgba(232,64,64,.3);color:var(--red)}
+.ltbtn.lkit:hover{background:rgba(232,64,64,.2)}
+.ltbtn.ulkit{background:var(--grndim);border-color:rgba(24,233,110,.3);color:var(--grn)}
+.ltbtn.ulkit:hover{background:rgba(24,233,110,.2)}
+.lkbadge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.64rem;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;padding:3px 8px;white-space:nowrap;border-radius:2px;
+}
+.lkbadge.locked{background:var(--reddim);color:var(--red);border:1px solid rgba(232,64,64,.25)}
+.lkbadge.open{background:var(--grndim);color:var(--grn);border:1px solid rgba(24,233,110,.25)}
+.ami{
+  background:var(--bg3);border:1px solid var(--line);
+  padding:9px 13px;display:flex;align-items:center;justify-content:space-between;
+  gap:9px;flex-wrap:wrap;margin-bottom:4px;border-radius:var(--r2);
+}
+.amiinfo{font-family:var(--f-head);font-size:.85rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:var(--tx1)}
+.amisub{font-size:.67rem;color:var(--tx2);margin-top:2px}
+.amibts{display:flex;gap:4px;flex-wrap:wrap}
+.amibtn{
+  padding:5px 10px;background:var(--bg2);border:1px solid var(--line);
+  color:var(--tx2);font-size:.7rem;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;
+  white-space:nowrap;border-radius:var(--r2);
+}
+.amibtn:hover{color:var(--tx1);border-color:var(--line2)}
+.amibtn.dw{background:var(--grndim);border-color:rgba(24,233,110,.3);color:var(--grn)}
+.amibtn.dd{background:rgba(79,142,247,.08);border-color:rgba(79,142,247,.3);color:var(--blue)}
+.amibtn.dl{background:var(--reddim);border-color:rgba(232,64,64,.3);color:var(--red)}
+
+/* ── ADMIN EDIT MODAL ──────────────────────────────── */
+#admModal{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(10px);
+  z-index:600;align-items:center;justify-content:center;padding:20px;
+}
+.admbox{
+  background:var(--bg2);border:1px solid var(--line2);
+  border-top:2px solid var(--grn);border-radius:var(--radius);
+  padding:28px;width:100%;max-width:440px;animation:fadeup .2s ease;
+}
+.admhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.admhdr h2{font-family:var(--f-head);font-size:1.15rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx1)}
+.admclose{background:transparent;border:none;color:var(--tx2);font-size:1.2rem;cursor:pointer;line-height:1;transition:color .15s}
+.admclose:hover{color:var(--tx1)}
+.rtoggle{display:flex;gap:6px;margin-bottom:18px}
+
+/* ── EMPTY STATE ───────────────────────────────────── */
+.empty{
+  text-align:center;padding:52px 18px;color:var(--tx2);
+  border:1px dashed var(--line);border-radius:var(--radius);
+}
+.empty .icon{font-size:2.2rem;margin-bottom:9px;opacity:.4}
+.empty h3{font-family:var(--f-head);font-size:1.2rem;font-weight:600;text-transform:uppercase;color:var(--tx1);margin-bottom:5px}
+.empty p{font-size:.8rem}
+
+/* ── TOAST ─────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:16px;right:16px;z-index:9999;
+  background:var(--bg3);border:1px solid var(--line2);border-left:3px solid var(--grn);
+  padding:10px 16px;font-size:.83rem;font-weight:600;letter-spacing:.04em;
+  transform:translateX(130%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+  max-width:270px;border-radius:var(--r2);
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+#toast.on{transform:translateX(0)}
+
+/* ── RESPONSIVE ────────────────────────────────────── */
+@media(max-width:560px){
+  .bshdr,.bsrow{grid-template-columns:1fr 90px 40px}.bsres{display:none}
+  .strow{grid-template-columns:33px 1fr 48px}.stelo{display:none}
+  .agrid{grid-template-columns:1fr}
+  .mrow{gap:6px}
+  .pn{font-size:.9rem}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="abox">
+    <div class="alogo">FRONTIER<small>Gran Prix 2026 — Pedro Juan Caballero</small></div>
+    <h2>Predicciones</h2>
+    <p class="asub">Sistema de picks para el torneo · Registrate o ingresá para participar.</p>
+    <div id="reg-notice">🔒 EL REGISTRO ESTÁ CERRADO</div>
+    <div class="atabs">
+      <button class="atab on" onclick="setMode('login',this)">Ingresar</button>
+      <button class="atab" id="tab-reg" onclick="setMode('reg',this)">Registrarse</button>
+    </div>
+    <label class="flabel">Usuario</label>
+    <input class="field" id="aUser" placeholder="tu_nombre" maxlength="20" onkeydown="if(event.key==='Enter')doAuth()">
+    <label class="flabel">Contraseña</label>
+    <input class="field" id="aPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
+    <div class="aerr" id="aErr"></div>
+    <button class="btn bprimary" onclick="doAuth()">CONTINUAR →</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="htop">
+    <div class="hbrand">
+      <h1>FRONTIER PREDICTOR<span>Gran Prix 2026 · Pedro Juan Caballero</span></h1>
+    </div>
+    <div class="live-badge">EN VIVO</div>
+    <div class="fbadge"><div class="fdot" id="fdot"></div><span id="flbl">Conectando…</span></div>
+    <button class="syncbtn" onclick="doSync()">↻ SYNC</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav>
+  <button class="tab on" onclick="showTab('predecir',this)">Predecir</button>
+  <button class="tab"    onclick="showTab('mispicks',this)">Mis picks</button>
+  <button class="tab"    onclick="showTab('ranking',this)">Ranking</button>
+  <button class="tab"    onclick="showTab('clasif',this)">Clasificación</button>
+  <button class="tab" id="tab-admin" style="display:none" onclick="showTab('admin',this)">⚙ Admin</button>
+</nav>
+
+<!-- ADMIN CONFIG MODAL -->
+<div id="admModal">
+  <div class="admbox">
+    <div class="admhdr">
+      <h2>⚙ CONFIGURACIÓN</h2>
+      <button class="admclose" onclick="closeAdmEdit()">✕</button>
+    </div>
+    <label class="flabel">URL torneo (chess-results)</label>
+    <input class="field" id="edit-url" placeholder="https://chess-results.com/tnr…" style="margin-bottom:12px">
+    <label class="flabel">Registro de usuarios</label>
+    <div class="rtoggle" id="rtbns">
+      <button id="rbtn-open"   class="btn bghost bfull" onclick="setRegEdit(true)">🟢 ABIERTO</button>
+      <button id="rbtn-closed" class="btn bghost bfull" onclick="setRegEdit(false)">🔒 CERRADO</button>
+    </div>
+    <button class="btn bprimary" onclick="saveAdmEdit()">GUARDAR →</button>
+    <div id="editmsg" style="font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;color:var(--grn);margin-top:9px;min-height:14px;text-transform:uppercase"></div>
+  </div>
+</div>
+
+<main>
+  <!-- PREDECIR -->
+  <div id="view-predecir" class="view on">
+    <div id="ubar"></div>
+    <div class="sh"><h2>CAM<em>PEÓN</em></h2><div class="chip cred">+5 PTS</div></div>
+    <div class="champhero">
+      <h3>¿Quién ganará el Frontier Open 2026?</h3>
+      <p>+5 puntos si acertás el campeón del torneo.</p>
+    </div>
+    <div id="clkbanner"></div>
+    <div class="cgrid" id="cgrid"></div>
+    <div class="ccfm">
+      <button class="btn bprimary" style="width:auto;margin-top:0" onclick="betChampion()">CONFIRMAR →</button>
+      <div id="mychamp"></div>
+    </div>
+    <div style="margin:26px 0 14px;padding-bottom:11px;border-bottom:1px solid var(--bdr)">
+      <div class="sh" style="margin-bottom:0;border-bottom:none;padding-bottom:0">
+        <h2>PARTI<em>DAS</em></h2>
+        <div class="chip cgray" id="rchip">RONDA 1</div>
+      </div>
+    </div>
+    <div class="ibar"><strong>Predecí</strong> el resultado de cada partida antes de que el admin cierre la ronda.<span class="pts">+3</span><span>por acierto</span></div>
+    <div class="rstrip" id="rstrip"></div>
+    <div id="pbox"></div>
+  </div>
+
+  <!-- MIS PICKS -->
+  <div id="view-mispicks" class="view">
+    <div class="sh"><h2>MIS <em>PICKS</em></h2></div>
+    <div id="mybets"></div>
+  </div>
+
+  <!-- RANKING -->
+  <div id="view-ranking" class="view">
+    <div class="sh"><h2>RAN<em>KING</em></h2></div>
+    <p style="font-size:.82rem;color:var(--grl);margin-bottom:13px">Campeón = <span style="color:var(--grn)">+5 pts</span> · Acierto = <span style="color:var(--grn)">+3 pts</span></p>
+    <div class="lbwrap" id="lbel"><div class="empty"><div class="icon">📊</div><h3>SIN APUESTAS</h3><p>El ranking aparece cuando haya picks.</p></div></div>
+    <div class="ptsl"><div class="ptsi">Acierto de partida <strong>+3 PTS</strong></div><div class="ptsi">Campeón correcto <strong>+5 PTS</strong></div></div>
+  </div>
+
+  <!-- CLASIFICACIÓN -->
+  <div id="view-clasif" class="view">
+    <div class="sh"><h2>CLASIFI<em>CACIÓN</em></h2><div class="chip cout">EN VIVO</div></div>
+    <div class="wbox" id="corswarn" style="display:none"><b>⚠ SIN ACCESO CORS</b>Visitá: <code>chess-results.com/tnr1308555</code></div>
+    <div id="standbox"></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="view-admin" class="view">
+    <div class="sh"><h2>PANEL <em>ADMIN</em></h2></div>
+    <div class="agrid">
+      <div class="acard">
+        <h3>Declarar campeón</h3>
+        <p style="font-size:.8rem;color:var(--grl);margin-bottom:9px;line-height:1.6">Resuelve todas las apuestas al campeón.</p>
+        <select id="achampsel"></select>
+        <button class="btn bprimary bfull" onclick="adminSetChampion()">✓ CONFIRMAR CAMPEÓN</button>
+        <div id="achampst" style="margin-top:7px;font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;color:var(--grl);letter-spacing:.06em;text-transform:uppercase">Pendiente</div>
+        <div style="margin-top:13px;padding-top:11px;border-top:1px solid var(--bdr)">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grl);margin-bottom:7px">Apuestas al campeón</div>
+          <div id="clkctrl"></div>
+        </div>
+      </div>
+      <div class="acard"><h3>Estadísticas</h3><div id="admstats"><p style="font-size:.8rem;color:var(--grl)">Cargando…</p></div></div>
+      <div class="acard">
+        <h3>Registro de usuarios</h3>
+        <p style="font-size:.8rem;color:var(--grl);margin-bottom:9px;line-height:1.6">Controlá quién puede registrarse.</p>
+        <div id="regstadm" style="margin-bottom:9px"></div>
+        <button class="btn bdanger bfull" style="margin-bottom:5px" onclick="adminToggleReg(false)">🔒 CERRAR REGISTRO</button>
+        <button class="btn bghost bfull" onclick="adminToggleReg(true)">🟢 ABRIR REGISTRO</button>
+      </div>
+      <div class="acard" style="grid-column:1/-1">
+        <h3>↻ Sync con chess-results.com</h3>
+        <p style="font-size:.8rem;color:var(--grl);margin-bottom:11px;line-height:1.6">
+          Importa emparejamientos y resultados reales de todas las rondas disponibles.<br>
+          Los resultados nuevos se guardan automáticamente y puntúan en tiempo real.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
+          <button id="syncNowBtn" class="btn bprimary" style="flex:1;min-width:140px" onclick="doSync()">↻ SYNC AHORA</button>
+          <button class="btn bghost" style="flex:1;min-width:120px" onclick="openAdmEdit()">✏ EDITAR CONFIG</button>
+        </div>
+        <div id="urladm" style="font-family:'Barlow Condensed',sans-serif;font-size:.68rem;font-weight:600;color:var(--grl);margin-bottom:10px;word-break:break-all;letter-spacing:.04em;text-transform:uppercase">URL: chess-results.com/tnr1308555</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gr)">LOG DE SINCRONIZACIÓN</div><button onclick="clearSyncLog()" style="font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--bdr);color:var(--gr);padding:2px 8px;cursor:pointer">✕ LIMPIAR</button></div>
+        <div id="synclog" style="background:var(--blk);border:1px solid var(--bdr);padding:10px 12px;font-family:'Courier New',monospace;font-size:.72rem;line-height:1.7;height:250px;overflow-y:auto;color:var(--grl)">
+          <span style="color:#444">— Presioná SYNC AHORA para sincronizar con chess-results.com —</span>
+        </div>
+      </div>
+      <div class="acard">
+        <h3>Zona de peligro</h3>
+        <p style="font-size:.8rem;color:var(--grl);margin-bottom:9px;line-height:1.6">Borra apuestas y resultados. Irreversible.</p>
+        <button class="btn bdanger bfull" onclick="adminReset()">⚠ RESETEAR TODO</button>
+      </div>
+    </div>
+    <div class="sh" style="margin-top:6px"><h2>CARGAR <em>RESULTADOS</em></h2></div>
+    <p style="font-size:.8rem;color:var(--grl);margin-bottom:13px">Los puntos se actualizan en tiempo real para todos.</p>
+    <div id="admrounds"></div>
+  </div>
+</main>
+
+<script>
+// ═══ JUGADORES ════════════════════════════════════════════
+const PL=[
+  {no:1,name:'Cantero, Rodolfo',elo:2204,fed:'PAR',title:'CM'},
+  {no:2,name:'Viñales, Enzo',elo:2199,fed:'PAR',title:'FM'},
+  {no:3,name:'Mayeregger, Arnold',elo:2170,fed:'PAR',title:'NM'},
+  {no:4,name:'Neves, Leonardo',elo:2141,fed:'BRA',title:'NM'},
+  {no:5,name:'Allo Collante, Enrique',elo:2116,fed:'PAR',title:''},
+  {no:6,name:'De Oliveira, Jairo',elo:2023,fed:'BRA',title:'NM'},
+  {no:7,name:'Serafim, Guilherme',elo:1989,fed:'BRA',title:''},
+  {no:8,name:'Cristino, Felipe',elo:1976,fed:'BRA',title:'NM'},
+  {no:9,name:'Ramalho, Lucas',elo:1948,fed:'BRA',title:''},
+  {no:10,name:'Fedrizzi, Roberto',elo:1931,fed:'BRA',title:'NM'},
+  {no:11,name:'Aguilera, Pedro',elo:1879,fed:'BRA',title:'AFM'},
+  {no:12,name:'Duailibi, Ricardo',elo:1875,fed:'BRA',title:'NM'},
+  {no:13,name:'Deus Filho, Joaquim',elo:1840,fed:'BRA',title:'NM'},
+  {no:14,name:'Vilela, Vitor',elo:1837,fed:'BRA',title:''},
+  {no:15,name:'Arruda Filho, Ivo',elo:1805,fed:'BRA',title:'NM'},
+  {no:16,name:'Areco Alvarenga, Eric',elo:1760,fed:'PAR',title:''},
+];
+const RDATES={1:'27 Feb',2:'27 Feb',3:'28 Feb',4:'28 Feb',5:'1 Mar',6:'1 Mar',7:'1 Mar'};
+const DEMO=[
+  {r:1,date:'27 Feb',games:[{w:1,b:2},{w:3,b:4},{w:5,b:6},{w:7,b:8},{w:9,b:10},{w:11,b:12},{w:13,b:14},{w:15,b:16}]},
+  {r:2,date:'27 Feb',games:[{w:2,b:3},{w:4,b:1},{w:6,b:5},{w:8,b:7}]},
+];
+DEMO.forEach(rd=>{ rd.games=rd.games.map(g=>({key:`r${rd.r}_w${g.w}_b${g.b}`,white:g.w,black:g.b,round:rd.r})); });
+
+const ADMIN_USER='admin'; // ← cambiá si querés otro nombre de admin
+const TID='1308555';
+const pn=no=>{const p=PL.find(x=>x.no===no);return p?p.name.split(',')[0].trim():`#${no}`;};
+const pf=no=>{const p=PL.find(x=>x.no===no);return p?p.name:`#${no}`;};
+
+// ═══ STATE ════════════════════════════════════════════════
+let CU=null,allBets={},results={},locks={},settings={},liveR=DEMO,selChamp=null,authMode='login',prevRank=null,curR=1;
+const isAdmin=()=>CU===ADMIN_USER;
+
+// ═══ FIREBASE ═════════════════════════════════════════════
+document.addEventListener('fb',()=>{
+  setFb(true);
+  buildCGrid(); buildAdmSel();
+  window._fb.onBets(d=>{allBets=d;tick();});
+  window._fb.onResults(d=>{results=d;tick();});
+  window._fb.onLocks(d=>{locks=d;tick();});
+  window._fb.onSettings(d=>{settings=d;tick();});
+  window._fb.onPairings(d=>{
+    if(d&&Object.keys(d).length){
+      const ld=[];
+      Object.entries(d).forEach(([rk,gs])=>{
+        const rn=parseInt(rk.replace('r',''));if(!gs)return;
+        const ga=Array.isArray(gs)?gs:Object.values(gs);
+        ld.push({r:rn,date:RDATES[rn]||'',games:ga.map(g=>({key:g.key||`r${rn}_w${g.white}_b${g.black}`,white:g.white,black:g.black,round:rn}))});
+      });
+      if(ld.length)liveR=ld.sort((a,b)=>a.r-b.r);
+    }
+    buildAdmRounds();tick();
+  });
+  window._fb.onSnapshot(d=>{
+    if(d){prevRank={};(Array.isArray(d)?d:Object.values(d)).forEach(row=>{prevRank[row.user]=row.pos;});}
+    else prevRank=null;
+    renderLB();
+  });
+});
+setTimeout(()=>{if(!window._fbReady)setFb(false,true);},7000);
+
+function setFb(ok,err=false){
+  const d=document.getElementById('fdot'),l=document.getElementById('flbl');
+  d.className='fdot'+(ok?' on':err?' err':'');
+  l.textContent=ok?'FIREBASE OK':err?'ERROR FIREBASE':'Conectando…';
+}
+function tick(){
+  renderLB();renderAdmStats();updateAdmResults();
+  if(CU){renderUbar();renderChampState();renderRounds();renderPairings();renderMyBets();}
+  const at=document.getElementById('tab-admin');if(at)at.style.display=isAdmin()?'':'none';
+  const rc=settings.registrationOpen===false;
+  const rn=document.getElementById('reg-notice');if(rn)rn.style.display=rc?'block':'none';
+  const tr=document.getElementById('tab-reg');
+  if(tr){if(rc){tr.style.display='none';if(authMode==='reg'){authMode='login';document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('on',i===0));}}else tr.style.display='';}
+  renderAdmSettings();
+}
+
+// ═══ TABS ═════════════════════════════════════════════════
+function showTab(n,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('view-'+n).classList.add('on');btn.classList.add('on');
+  if(n==='ranking')renderLB();
+  if(n==='clasif')renderStand();
+  if(n==='mispicks')renderMyBets();
+}
+
+// ═══ AUTH ═════════════════════════════════════════════════
+async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function setMode(m,btn){authMode=m;document.querySelectorAll('.atab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('aErr').textContent='';}
+async function doAuth(){
+  const u=document.getElementById('aUser').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const p=document.getElementById('aPass').value;
+  const er=document.getElementById('aErr');er.textContent='';
+  if(u.length<2)return er.textContent='Nombre muy corto (mín. 2 caracteres).';
+  if(p.length<4)return er.textContent='Contraseña muy corta (mín. 4 caracteres).';
+  if(!/^[a-z0-9_]+$/.test(u))return er.textContent='Solo letras, números y _ sin espacios.';
+  const hash=await sha256(u+':'+p);
+  const ex=await window._fb.getUser(u);
+  if(authMode==='reg'){
+    if(ex)return er.textContent='Ese usuario ya existe. Ingresá.';
+    if(u!==ADMIN_USER&&settings.registrationOpen===false)return er.textContent='El registro está cerrado. Contactá al admin.';
+    await window._fb.createUser(u,hash);finishLogin(u);
+  } else {
+    if(!ex)return er.textContent='Usuario no encontrado. ¿Querés registrarte?';
+    if(ex.hash!==hash)return er.textContent='Contraseña incorrecta.';
+    finishLogin(u);
+  }
+}
+function finishLogin(u){CU=u;document.getElementById('auth').style.display='none';selChamp=allBets[u]?.champion?.player||null;if(selChamp)document.querySelectorAll('.co').forEach(b=>b.classList.toggle('sel',+b.dataset.no===selChamp));tick();toast(`¡BIENVENIDO, ${u.toUpperCase()}!`);}
+function logout(){CU=null;selChamp=null;document.getElementById('aUser').value='';document.getElementById('aPass').value='';document.getElementById('aErr').textContent='';document.getElementById('auth').style.display='flex';}
+
+// ═══ USER BAR ═════════════════════════════════════════════
+function renderUbar(){
+  if(!CU)return;
+  document.getElementById('ubar').innerHTML=`<div class="ubar">
+    <div class="uname">♟ ${esc(CU)}<small>${isAdmin()?'— ADMIN':'— CONECTADO'}</small></div>
+    <div class="usp"></div>
+    ${isAdmin()?`<button class="btn bghost bsm" onclick="openAdmEdit()">⚙ EDITAR</button>`:''} 
+    <button class="btn bghost bsm" onclick="logout()">SALIR</button>
+  </div>`;
+}
+
+// ═══ CHAMPION ═════════════════════════════════════════════
+function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${pn(p.no)}</span><span class="celo">${p.elo}</span></div>`).join('');}
+function selC(el,no){if(locks.champion)return toast('Las apuestas al campeón están cerradas.');selChamp=no;document.querySelectorAll('.co').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
+async function betChampion(){
+  if(!CU)return toast('Iniciá sesión.');
+  if(!selChamp)return toast('Seleccioná un jugador.');
+  if(locks.champion)return toast('Las apuestas al campeón están cerradas.');
+  if(results.champion)return toast('El campeón ya fue declarado.');
+  await window._fb.setChampBet(CU,selChamp);toast(`✓ APOSTASTE A ${pn(selChamp).toUpperCase()}`);
+}
+function renderChampState(){
+  document.getElementById('clkbanner').innerHTML=locks.champion?`<div class="lkbanner">🔒 APUESTAS AL CAMPEÓN CERRADAS — Solo el admin puede reabrirlas.</div>`:'';
+  document.querySelectorAll('.co').forEach(b=>b.classList.toggle('lkc',!!locks.champion));
+  const el=document.getElementById('mychamp'),bet=allBets[CU]?.champion;
+  if(!bet){el.innerHTML='';return;}
+  let rc='pend',rl='PENDIENTE';
+  if(results.champion){rc=results.champion===bet.player?'won':'lost';rl=rc==='won'?'✓ +5 PTS':'✗ FALLASTE';}
+  el.innerHTML=`<div class="mychbox"><div class="cl">TU APUESTA</div><div class="cn">${pf(bet.player)}</div><span class="rbb ${rc}">${rl}</span></div>`;
+}
+
+// ═══ ROUNDS & PAIRINGS ════════════════════════════════════
+function renderRounds(){
+  const rns=liveR.map(x=>x.r),max=Math.max(...rns,7);
+  document.getElementById('rstrip').innerHTML=Array.from({length:max},(_,i)=>i+1).map(r=>{
+    const has=liveR.find(x=>x.r===r);
+    const done=has&&Object.keys(results.matches||{}).some(k=>k.startsWith(`r${r}_`));
+    const lk=!!locks.rounds?.[r];const act=r===curR;
+    return`<button class="rb${act?' active':''}${done?' done':''}${lk&&!act?' lkr':''}${!has?' fut':''}"onclick="${has?`selRound(${r})`:''}">${act?`R${r}${RDATES[r]?' · '+RDATES[r]:''}`:` R${r}`}</button>`;
+  }).join('');
+  document.getElementById('rchip').textContent=`RONDA ${curR}${RDATES[curR]?' · '+RDATES[curR]:''}`;
+}
+function selRound(r){curR=r;renderRounds();renderPairings();}
+
+function renderPairings(){
+  const box=document.getElementById('pbox'),rd=liveR.find(x=>x.r===curR);
+  if(!rd){box.innerHTML=`<div class="empty"><div class="icon">⏳</div><h3>RONDA ${curR} NO DISPONIBLE</h3><p>Los emparejamientos se cargan antes de la ronda.</p></div>`;return;}
+  const lk=!!locks.rounds?.[curR];
+  box.innerHTML=(lk?`<div class="lkbanner">🔒 RONDA ${curR} CERRADA — No podés modificar tus picks.</div>`:'') + rd.games.map(g=>matchCard(g,lk)).join('');
+}
+
+function matchCard(g,rlk){
+  if(!CU)return`<div class="pair"><div class="pinner"><div class="mrow"><div class="ps"><div class="pn">${pn(g.white)}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${PL.find(x=>x.no===g.white)?.elo||'—'}</span></div></div><div class="vs">VS</div><div class="ps r"><div class="pn">${pn(g.black)}</div><div class="psub"><span class="pelo">${PL.find(x=>x.no===g.black)?.elo||'—'}</span><span class="pip pipb"></span></div></div></div><div class="nouser">INGRESÁ PARA PREDECIR</div></div></div>`;
+  const myP=allBets[CU]?.matches?.[g.key]?.pick||null;
+  const res=results.matches?.[g.key]||null,past=!!res;
+  const cor=myP&&res&&myP===res,wr=myP&&res&&myP!==res;
+  const rl=res==='white'?'1-0':res==='black'?'0-1':res==='draw'?'½-½':'—';
+  const rc=res==='white'?'ww':res==='black'?'bw':res==='draw'?'dr':'nd';
+  const wl=pn(g.white),bl=pn(g.black);
+  const we=PL.find(x=>x.no===g.white)?.elo||'—',be=PL.find(x=>x.no===g.black)?.elo||'—';
+  const dis=past||rlk;
+  const pbc=t=>{if(!myP)return'';if(myP===t&&res)return res===t?'ok':'bad';if(myP===t&&!res)return t==='white'?'sw':t==='draw'?'sd':'sb';return'';};
+  let rbar='';
+  if(res){
+    const cls=res==='white'?'rw':res==='draw'?'rd':'rl';
+    const txt=res==='white'?`${wl} 1-0`:res==='draw'?'½ - ½':`0-1 ${bl}`;
+    const verd=cor?`<span class="vok">✓ +3</span>`:wr?`<span class="vbad">✗</span>`:'';
+    rbar=`<div class="rbar ${cls}">${txt}${verd?' &nbsp;·&nbsp; '+verd:''}</div>`;
+  }
+  return`<div class="pair${myP?' hpred':''}${cor?' cor':''}${wr?' wr':''}"><div class="pinner">
+    <div class="brow"><span class="bnum">Tablero ${g.key.split('_')[0].replace('r','Ronda ')}</span><span class="rtag ${rc}">${rl}</span></div>
+    <div class="mrow">
+      <div class="ps"><div class="pn">${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span></div></div>
+      <div class="vs">vs</div>
+      <div class="ps r"><div class="pn">${bl}</div><div class="psub"><span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
+    </div>
+    <div class="plabel">Tu predicción</div>
+    <div class="prow">
+      <button class="pb ${pbc('white')}" onclick="pickM('${g.key}',${g.round},'white')" ${dis?'disabled':''}>${wl} gana</button>
+      <button class="pb ${pbc('draw')}"  onclick="pickM('${g.key}',${g.round},'draw')"  ${dis?'disabled':''}>Tablas</button>
+      <button class="pb ${pbc('black')}" onclick="pickM('${g.key}',${g.round},'black')" ${dis?'disabled':''}>${bl} gana</button>
+    </div>
+  </div>${rbar}</div>`;
+}
+
+async function pickM(mk,round,pick){
+  if(!CU)return toast('Iniciá sesión.');
+  if(results.matches?.[mk])return toast('Partida ya resuelta.');
+  if(locks.rounds?.[round])return toast(`La Ronda ${round} está cerrada.`);
+  await window._fb.setMatchBet(CU,mk,pick);
+  if(!allBets[CU])allBets[CU]={};if(!allBets[CU].matches)allBets[CU].matches={};
+  allBets[CU].matches[mk]={pick,ts:Date.now()};
+  renderPairings();renderMyBets();
+}
+
+// ═══ MY BETS ══════════════════════════════════════════════
+function renderMyBets(){
+  if(!CU)return;
+  const el=document.getElementById('mybets'),myM=allBets[CU]?.matches||{},cb=allBets[CU]?.champion;
+  let hits=0,pts=0;const keys=Object.keys(myM);
+  if(cb&&results.champion&&results.champion===cb.player){hits++;pts+=5;}
+  keys.forEach(k=>{const rr=results.matches?.[k];if(rr&&myM[k].pick===rr){hits++;pts+=3;}});
+  let html=`<div class="sboxes"><div class="sbox"><div class="sv">${keys.length+(cb?1:0)}</div><div class="sl">Picks</div></div><div class="sbox"><div class="sv" style="color:var(--grn)">${hits}</div><div class="sl">Aciertos</div></div><div class="sbox"><div class="sv">${pts}</div><div class="sl">Puntos</div></div></div>`;
+  html+=`<div class="sh" style="margin-bottom:9px"><h2 style="font-size:1.3rem">CAM<em>PEÓN</em></h2></div>`;
+  if(cb){let rc='pend',rl='PENDIENTE';if(results.champion){rc=results.champion===cb.player?'won':'lost';rl=rc==='won'?'✓ +5 PTS':'✗ FALLASTE';}html+=`<div style="background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:13px;display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:18px"><div style="font-family:var(--f-head);font-size:1rem;font-weight:500;text-transform:uppercase;flex:1">${pf(cb.player)}</div><span class="rbb ${rc}">${rl}</span></div>`;}
+  else html+=`<div class="empty" style="padding:13px;margin-bottom:18px"><p>No apostaste al campeón todavía.</p></div>`;
+  html+=`<div class="sh" style="margin-bottom:9px"><h2 style="font-size:1.3rem">PARTI<em>DAS</em></h2></div>`;
+  if(!keys.length)html+=`<div class="empty"><div class="icon">♟</div><h3>SIN PICKS</h3><p>No predijiste ninguna partida todavía.</p></div>`;
+  else{
+    html+=`<div class="bstbl"><div class="bshdr"><div>PARTIDA</div><div>TU PICK</div><div>RESULTADO</div><div>PTS</div></div>`;
+    liveR.forEach(rd=>rd.games.forEach(g=>{
+      if(!myM[g.key])return;
+      const pick=myM[g.key].pick,rr=results.matches?.[g.key]||null;
+      const won=rr&&pick===rr,lost=rr&&pick!==rr;
+      const pl=pick==='white'?`${pn(g.white)} 1-0`:pick==='draw'?'½ - ½':`0-1 ${pn(g.black)}`;
+      const rl=!rr?'—':rr==='white'?`${pn(g.white)} 1-0`:rr==='draw'?'½ - ½':`0-1 ${pn(g.black)}`;
+      html+=`<div class="bsrow"><div><div class="bsmatch">${pn(g.white)} – ${pn(g.black)}</div><div class="bsrnd">R${g.round} · ${rd.date}</div></div><div class="bspick">${pl}</div><div class="bsres" style="color:${!rr?'var(--tx2)':won?'var(--grn)':'var(--red)'}">${rl}</div><div class="bspts">${won?'+3':lost?'0':'—'}</div></div>`;
+    }));
+    html+=`</div>`;
+  }
+  el.innerHTML=html;
+}
+
+// ═══ LEADERBOARD ══════════════════════════════════════════
+function renderLB(){
+  const users={};const ens=u=>{if(!users[u])users[u]={hits:0,pts:0};};
+  Object.entries(allBets).forEach(([u,d])=>{
+    if(u===ADMIN_USER)return;ens(u);
+    if(d.champion&&results.champion&&d.champion.player===results.champion){users[u].hits++;users[u].pts+=5;}
+    Object.entries(d.matches||{}).forEach(([k,b])=>{const rr=results.matches?.[k];if(rr&&b.pick===rr){users[u].hits++;users[u].pts+=3;}});
+  });
+  const sorted=Object.entries(users).sort((a,b)=>b[1].pts-a[1].pts||b[1].hits-a[1].hits);
+  const lb=document.getElementById('lbel');
+  if(!sorted.length){lb.innerHTML=`<div class="empty"><div class="icon">📊</div><h3>SIN APUESTAS</h3><p>El ranking aparece cuando haya picks.</p></div>`;return;}
+  const max=Math.max(...sorted.map(([,v])=>v.pts),1);
+  const pc=['p1','p2','p3'];
+  function movBadge(u,cur){
+    if(!prevRank||prevRank[u]===undefined)return`<div class="lbmov"><span class="mov nw">NUEVO</span></div>`;
+    const d=prevRank[u]-cur;
+    if(d===0)return`<div class="lbmov"><span class="mov eq">—</span></div>`;
+    if(d>0)return`<div class="lbmov"><span class="mov up">▲${d}</span></div>`;
+    return`<div class="lbmov"><span class="mov dn">▼${Math.abs(d)}</span></div>`;
+  }
+  lb.innerHTML=sorted.map(([u,v],i)=>`<div class="lbrow">
+    <div class="lbpos ${pc[i]||''}">${i+1}</div>
+    <div class="lbbody"><div class="lbinfo">
+      <div class="lbpname">${esc(u)}${u===CU?'<span class="ytag">VOS</span>':''}</div>
+      <div class="lbsub">${v.hits} aciertos</div>
+      <div class="lbbar"><div class="lbbarfill" style="width:${(v.pts/max)*100}%"></div></div>
+    </div></div>
+    <div class="lbsc"><div class="lbpts">${v.pts}</div><div class="lbptsl">PTS</div></div>
+    ${movBadge(u,i+1)}
+  </div>`).join('');
+}
+
+async function saveSnap(){
+  const users={};
+  Object.entries(allBets).forEach(([u,d])=>{if(!users[u])users[u]={hits:0,pts:0};if(d.champion&&results.champion&&d.champion.player===results.champion){users[u].hits++;users[u].pts+=5;}Object.entries(d.matches||{}).forEach(([k,b])=>{const rr=results.matches?.[k];if(rr&&b.pick===rr){users[u].hits++;users[u].pts+=3;}});});
+  const sorted=Object.entries(users).sort((a,b)=>b[1].pts-a[1].pts||b[1].hits-a[1].hits);
+  await window._fb.saveSnapshot(sorted.map(([u],i)=>({user:u,pos:i+1})));
+}
+
+// ═══ STANDINGS ════════════════════════════════════════════
+let _standData = [];
+function renderStand() {
+  if (_standData.length) { renderStandFromData(_standData); return; }
+  document.getElementById('standbox').innerHTML =
+    `<div style="border-left:3px solid var(--red);padding:8px 12px;background:var(--c2);font-size:.8rem;color:var(--grl);margin-bottom:9px">
+      Torneo inicia 27 Feb. Presioná <b>↻ SYNC</b> para traer los datos reales de chess-results.com
+    </div>
+    <div class="stlist">${PL.map((p,i)=>`
+    <div class="strow">
+      <div class="stpos${i<3?' top':''}">${i+1}</div>
+      <div><div class="stname">${p.name.split(',')[0]}</div><div class="stmeta">${p.fed}${p.title?' · '+p.title:''}</div></div>
+      <div class="stelo">${p.elo}</div>
+      <div class="stsc" style="color:var(--gr)">—</div>
+    </div>`).join('')}</div>`;
+}
+function renderStandFromData(stand) {
+  _standData = stand;
+  document.getElementById('standbox').innerHTML =
+    `<div style="border-left:3px solid var(--grn);padding:8px 12px;background:var(--c2);font-size:.8rem;color:var(--grl);margin-bottom:9px">
+      ✓ Datos en vivo de chess-results.com · ${new Date().toLocaleTimeString('es')}
+    </div>
+    <div class="stlist">${stand.map(p=>`
+    <div class="strow">
+      <div class="stpos${p.rank<=3?' top':''}">${p.rank}</div>
+      <div><div class="stname">${(p.name||'').split(',')[0]||p.name}</div><div class="stmeta">${p.fed||''}</div></div>
+      <div class="stelo">${p.rtg||'—'}</div>
+      <div class="stsc">${p.pts||'—'}</div>
+    </div>`).join('')}</div>`;
+}
+
+// ═══ ADMIN ════════════════════════════════════════════════
+function buildAdmSel(){document.getElementById('achampsel').innerHTML=`<option value="">— Elegí el campeón —</option>`+PL.map(p=>`<option value="${p.no}">${p.name} (${p.elo})</option>`).join('');}
+function buildAdmRounds(){
+  document.getElementById('admrounds').innerHTML=liveR.map(rd=>`
+    <div class="arblock" id="arb-${rd.r}">
+      <div class="arblhdr"><h4>RONDA ${rd.r} — ${rd.date||RDATES[rd.r]||''}</h4><div class="lktog" id="lt-${rd.r}"></div></div>
+      ${rd.games.map(g=>`<div class="ami">
+        <div><div class="amiinfo">⬜ ${pf(g.white)} vs ${pf(g.black)} ⬛</div><div class="amisub">${g.key}</div></div>
+        <div class="amibts">
+          <button class="amibtn" id="ab-${g.key}-white" onclick="adminSetMatch('${g.key}',${rd.r},'white')">⬜ ${pn(g.white)}</button>
+          <button class="amibtn" id="ab-${g.key}-draw"  onclick="adminSetMatch('${g.key}',${rd.r},'draw')">🤝 Tablas</button>
+          <button class="amibtn" id="ab-${g.key}-black" onclick="adminSetMatch('${g.key}',${rd.r},'black')">⬛ ${pn(g.black)}</button>
+        </div>
+      </div>`).join('')}
+    </div>`).join('');
+}
+function updateAdmResults(){
+  liveR.forEach(rd=>rd.games.forEach(g=>{
+    const r=results.matches?.[g.key];
+    ['white','draw','black'].forEach(opt=>{const btn=document.getElementById(`ab-${g.key}-${opt}`);if(!btn)return;btn.className='amibtn'+(r===opt?(opt==='white'?' dw':opt==='draw'?' dd':' dl'):'');});
+  }));
+  const el=document.getElementById('achampst');
+  if(results.champion)el.innerHTML=`CAMPEÓN: <span style="color:var(--grn)">${pf(results.champion)}</span>`;
+  else el.textContent='Campeón: pendiente';
+  liveR.forEach(rd=>{
+    const lt=document.getElementById(`lt-${rd.r}`);if(!lt)return;
+    const lk=!!locks.rounds?.[rd.r];
+    lt.innerHTML=lk?`<span class="lkbadge locked">🔒 CERRADA</span><button class="ltbtn ulkit" onclick="adminToggleRound(${rd.r},false)">🔓 ABRIR</button>`:`<span class="lkbadge open">🟢 ABIERTA</span><button class="ltbtn lkit" onclick="adminToggleRound(${rd.r},true)">🔒 CERRAR</button>`;
+  });
+  const cl=document.getElementById('clkctrl');if(!cl)return;
+  const clk=!!locks.champion;
+  cl.innerHTML=clk?`<span class="lkbadge locked">🔒 CERRADAS</span><button class="ltbtn ulkit" onclick="adminToggleChamp(false)">🔓 ABRIR</button>`:`<span class="lkbadge open">🟢 ABIERTAS</span><button class="ltbtn lkit" onclick="adminToggleChamp(true)">🔒 CERRAR</button>`;
+}
+function renderAdmStats(){
+  const io=settings.registrationOpen!==false;
+  const us=Object.keys(allBets).length,tot=Object.values(allBets).reduce((a,d)=>a+Object.keys(d.matches||{}).length,0);
+  const cbs=Object.values(allBets).filter(d=>d.champion).length,res=Object.keys(results.matches||{}).length;
+  const ag=liveR.flatMap(r=>r.games).length;
+  document.getElementById('admstats').innerHTML=`<div class="stline">Usuarios <span>${us}</span></div><div class="stline">Registro <span style="color:${io?'var(--grn)':'var(--red)'}">${io?'ABIERTO':'CERRADO'}</span></div><div class="stline">Apostaron campeón <span>${cbs}</span></div><div class="stline">Picks de partidas <span>${tot}</span></div><div class="stline">Partidas resueltas <span>${res}/${ag}</span></div><div class="stline">Campeón <span style="color:${results.champion?'var(--grn)':'var(--gr)'}">${results.champion?pf(results.champion):'PENDIENTE'}</span></div>`;
+}
+async function adminSetMatch(mk,round,res){
+  const rd=liveR.find(x=>x.r===round),g=rd?.games.find(x=>x.key===mk);if(!g)return;
+  const label=res==='white'?`⬜ ${pn(g.white)}`:res==='draw'?'🤝 Tablas':`⬛ ${pn(g.black)}`;
+  if(!confirm(`R${round}: ${label}\n¿Confirmar resultado?`))return;
+  await saveSnap();await window._fb.setMatchResult(mk,res);toast(`✓ R${round} · ${label}`);
+}
+async function adminSetChampion(){
+  const no=+document.getElementById('achampsel').value;if(!no)return toast('Seleccioná el campeón.');
+  if(!confirm(`¿Declarar a ${pf(no)} como campeón?`))return;
+  await saveSnap();await window._fb.setChampResult(no);toast(`✓ CAMPEÓN: ${pf(no)}`);
+}
+async function adminToggleRound(rn,lock){if(!confirm(`¿${lock?'Cerrar':'Abrir'} la Ronda ${rn}?`))return;await window._fb.setRoundLock(rn,lock);toast(lock?`🔒 RONDA ${rn} CERRADA`:`🔓 RONDA ${rn} ABIERTA`);}
+async function adminToggleChamp(lock){if(!confirm(`¿${lock?'Cerrar':'Abrir'} las apuestas al campeón?`))return;await window._fb.setChampLock(lock);toast(lock?'🔒 CAMPEÓN CERRADO':'🔓 CAMPEÓN ABIERTO');}
+async function adminToggleReg(open){if(!confirm(`¿${open?'Abrir':'Cerrar'} el registro?`))return;await window._fb.setSetting('registrationOpen',open);toast(open?'🟢 REGISTRO ABIERTO':'🔒 REGISTRO CERRADO');}
+async function adminReset(){if(!confirm('⚠ ¿BORRAR TODO? Irreversible.'))return;await window._fb.resetAll();toast('TODO RESETEADO.');}
+
+let _editRegO=null;
+function openAdmEdit(){if(!isAdmin())return;document.getElementById('admModal').style.display='flex';document.getElementById('edit-url').value=settings.crUrl||'';_editRegO=settings.registrationOpen!==false;refreshRBtns();document.getElementById('editmsg').textContent='';}
+function closeAdmEdit(){document.getElementById('admModal').style.display='none';}
+function setRegEdit(v){_editRegO=v;refreshRBtns();}
+function refreshRBtns(){
+  const ob=document.getElementById('rbtn-open'),cb=document.getElementById('rbtn-closed');if(!ob||!cb)return;
+  ob.style.borderColor=_editRegO?'var(--grn)':'';ob.style.color=_editRegO?'var(--grn)':'';
+  cb.style.borderColor=!_editRegO?'var(--red)':'';cb.style.color=!_editRegO?'var(--red)':'';
+}
+async function saveAdmEdit(){
+  const url=document.getElementById('edit-url').value.trim();
+  await window._fb.setSetting('crUrl',url||null);await window._fb.setSetting('registrationOpen',_editRegO!==false);
+  document.getElementById('editmsg').textContent='✓ GUARDADO';setTimeout(closeAdmEdit,900);toast('✓ CONFIGURACIÓN GUARDADA');
+}
+function renderAdmSettings(){
+  const io=settings.registrationOpen!==false;
+  const re=document.getElementById('regstadm');const le=document.getElementById('urladm');
+  if(re)re.innerHTML=io?'<span class="lkbadge open">🟢 REGISTRO ABIERTO</span>':'<span class="lkbadge locked">🔒 REGISTRO CERRADO</span>';
+  if(le)le.textContent='URL: chess-results.com/tnr'+TID+(settings.crUrl?' (custom)':'');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCRAPER CHESS-RESULTS
+// Usa dos proxies CORS como fallback. Parsea emparejamientos
+// y resultados directamente del HTML de chess-results.com
+// ═══════════════════════════════════════════════════════════
+
+const CR_BASE = `https://chess-results.com/tnr${TID}.aspx`;
+const MAX_RDS = 7;
+
+// Proxies CORS — se prueban en orden hasta que uno responde
+// chess-results.com bloquea fetches directos por CORS, necesitamos proxy
+const PROXIES = [
+  // allorigins: devuelve JSON { contents: "..." }
+  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  // codetabs: devuelve HTML directo
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  // corsproxy.io: devuelve HTML directo
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+];
+
+// ── LOG VISIBLE ────────────────────────────────────────────
+function syncLog(msg, type='info') {
+  const el = document.getElementById('synclog');
+  if (!el) return;
+  const col = {info:'#aaa', ok:'#4ade80', err:'#e8001d', warn:'#f5a623', hi:'#fff'}[type]||'#aaa';
+  const now = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += `<div style="color:${col};margin:1px 0"><span style="color:#555;user-select:none">[${now}] </span>${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearSyncLog() {
+  const el = document.getElementById('synclog');
+  if (el) el.innerHTML = '<span style="color:#555">— iniciando sync… —</span>';
+}
+
+// ── FETCH CON PROXY FALLBACK ───────────────────────────────
+// allorigins devuelve { contents: "..." }
+// codetabs devuelve el HTML directo como texto
+async function crFetch(crUrl) {
+  let lastErr = null;
+  for (const buildProxy of PROXIES) {
+    try {
+      const proxyUrl = buildProxy(crUrl);
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(14000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      // allorigins envuelve en JSON
+      let html = text;
+      if (text.trimStart().startsWith('{')) {
+        const j = JSON.parse(text);
+        html = j.contents || j.data || '';
+      }
+      if (!html || html.length < 300) throw new Error('Respuesta demasiado corta');
+      return html;
+    } catch(e) {
+      lastErr = e;
+    }
+  }
+  throw new Error(lastErr?.message || 'Todos los proxies fallaron');
+}
+
+// ── LIMPIEZA Y MATCHING DE JUGADORES ──────────────────────
+const TITLE_RE = /^\s*(GM|IM|FM|CM|NM|WGM|WIM|WFM|WCM|AFM|AIM|AGM)\s+/i;
+const cleanN = s => (s||'').replace(TITLE_RE,'').trim();
+
+function matchPlayer(raw) {
+  if (!raw || raw.trim().length < 2) return null;
+  const name = cleanN(raw);
+  const nl   = name.toLowerCase();
+  const sur  = nl.split(',')[0].trim();   // apellido (antes de la coma)
+  const fst  = nl.split(',')[1]?.trim();  // nombre (después de la coma)
+
+  // 1. Exacto
+  let p = PL.find(x => x.name.toLowerCase() === nl);
+  if (p) return p;
+  // 2. Apellido exacto
+  p = PL.find(x => x.name.toLowerCase().split(',')[0].trim() === sur);
+  if (p) return p;
+  // 3. Apellido contiene / es contenido
+  p = PL.find(x => {
+    const xs = x.name.toLowerCase().split(',')[0].trim();
+    return xs.includes(sur) || sur.includes(xs);
+  });
+  if (p) return p;
+  // 4. Coincidencia por nombre (cuando el formato es "Nombre Apellido")
+  if (!nl.includes(',')) {
+    const parts = nl.split(/\s+/);
+    const last  = parts[parts.length-1];
+    p = PL.find(x => x.name.toLowerCase().split(',')[0].trim() === last);
+    if (p) return p;
+    p = PL.find(x => x.name.toLowerCase().split(',')[0].trim().includes(last) && last.length > 3);
+    if (p) return p;
+  }
+  return null;
+}
+
+// ── PARSEAR RESULTADO ──────────────────────────────────────
+// chess-results usa: "1 - 0", "0 - 1", "½ - ½", "1/2", "*", "+:-", "-:+"
+function parseRes(txt) {
+  if (!txt) return null;
+  const t = txt.trim()
+    .replace(/\u00BD/g, '½')   // caracter Unicode ½
+    .replace(/\s/g,'')
+    .replace(/[–—]/g,'-');
+  if (!t || t === '*' || t === '-') return null; // pendiente / no jugado
+  if (/^(1-0|1:0|\+:-)$/.test(t))                          return 'white';
+  if (/^(0-1|0:1|-:\+)$/.test(t))                          return 'black';
+  if (/^(½-½|½:½|1\/2-1\/2|1\/2|0\.5-0\.5|0,5-0,5)$/.test(t)) return 'draw';
+  // Formato decimal: "1.0 - 0.0", "0.5 - 0.5"
+  const m = t.match(/^([\d.,½]+)-([\d.,½]+)$/);
+  if (m) {
+    const w = parseFloat(m[1].replace(',','.').replace('½','0.5'));
+    const b = parseFloat(m[2].replace(',','.').replace('½','0.5'));
+    if (!isNaN(w) && !isNaN(b)) {
+      if (w > b) return 'white';
+      if (b > w) return 'black';
+      if (w === b && w > 0) return 'draw';
+    }
+  }
+  return null;
+}
+
+// ── PARSEAR TABLA DE EMPAREJAMIENTOS (art=2&rd=N) ──────────
+//
+// Estructura REAL de chess-results (confirmada):
+//
+//   Encabezado:  Bo. | No. | (flag) | White | Rtg | Club/City | Pts. | Result | Pts. | Club/City | Rtg | Black | (flag) | No.
+//   Indices típicos con flag: [0]Bo [1]No [2]flag [3]White [4]Rtg [5]Club [6]Pts [7]Res [8]Pts [9]Club [10]Rtg [11]Black
+//   Índices sin flag:          [0]Bo [1]No [2]White [3]Rtg [4]Club [5]Pts [6]Res [7]Pts [8]Club [9]Rtg [10]Black
+//
+// El resultado está en la celda que contiene "1-0", "0-1", "½-½", "1/2" o "*"
+// La tabla principal tiene clase "CRs1".
+//
+// URL correcta para emparejamientos: art=2&rd=N  (no art=4)
+
+function parsePairings(html, round) {
+  const doc   = new DOMParser().parseFromString(html, 'text/html');
+  const games = [];
+  const seen  = new Set();
+
+  // chess-results usa clase "CRs1" para sus tablas de datos
+  const tables = [...doc.querySelectorAll('table.CRs1, table')];
+
+  for (const tbl of tables) {
+    const rows = [...tbl.querySelectorAll('tr')];
+    if (rows.length < 2) continue;
+
+    // ── Detectar columnas por encabezado ──────────────────
+    let colBo=-1, colW=-1, colB=-1, colRes=-1;
+    for (const row of rows) {
+      const heads = [...row.querySelectorAll('th,td')];
+      if (heads.length < 5) continue;
+      heads.forEach((c,i) => {
+        const t = c.textContent.trim().toLowerCase().replace(/[.\s]/g,'');
+        if (/^bo$|^board$/.test(t))               colBo  = i;
+        else if (/white|blanca|weiss/.test(t))    colW   = i;
+        else if (/black|negra|schwarz/.test(t))   colB   = i;
+        else if (/^res(ult)?$/.test(t))           colRes = i;
+      });
+      if (colW>=0 && colB>=0 && colRes>=0) break;
+    }
+
+    // ── Procesar filas de datos ───────────────────────────
+    rows.forEach(row => {
+      const cells = [...row.querySelectorAll('td')];
+      if (cells.length < 5) return;
+
+      // Col 0 debe ser número de tablero
+      const boardTxt = cells[0]?.textContent?.trim();
+      if (!/^\d{1,3}$/.test(boardTxt)) return;
+      const board = +boardTxt;
+
+      let wName='', bName='', resTxt='';
+
+      if (colW>=0 && colB>=0 && colRes>=0) {
+        // Columnas detectadas por encabezado — camino feliz
+        wName  = cleanN(cells[colW]?.textContent);
+        bName  = cleanN(cells[colB]?.textContent);
+        resTxt = cells[colRes]?.textContent?.trim();
+      } else {
+        // Fallback: buscar el resultado buscando la celda con patrón de score
+        // y deducir blancas/negras por posición relativa
+        let resIdx = -1;
+        cells.forEach((c,i) => {
+          const t = c.textContent.trim().replace(/\s/g,'');
+          if (/^(1-0|0-1|½-½|1\/2|½:½|\*|0\.5-0\.5|\+:-|-:\+|1:0|0:1)$/.test(t)) resIdx = i;
+        });
+
+        if (resIdx > 2 && resIdx < cells.length - 2) {
+          // Estructura: [..., White, Rtg?, Pts?, Res, Pts?, Rtg?, Black, ...]
+          // White suele estar 2-3 celdas antes del resultado
+          // Black suele estar 2-3 celdas después
+          // Buscar la celda con texto más largo a izquierda del resultado
+          let wIdx = -1, bIdx = -1;
+          for (let i = resIdx-1; i >= 1; i--) {
+            const t = cleanN(cells[i]?.textContent);
+            if (t.length > 3 && matchPlayer(t)) { wIdx = i; break; }
+          }
+          for (let i = resIdx+1; i < cells.length; i++) {
+            const t = cleanN(cells[i]?.textContent);
+            if (t.length > 3 && matchPlayer(t)) { bIdx = i; break; }
+          }
+          if (wIdx>=0) wName = cleanN(cells[wIdx]?.textContent);
+          if (bIdx>=0) bName = cleanN(cells[bIdx]?.textContent);
+          resTxt = cells[resIdx]?.textContent?.trim();
+        } else if (cells.length >= 9) {
+          // Formato estándar Swiss con flags: Bo|No|flag|White|Rtg|Club|Pts|Res|Pts|Club|Rtg|Black
+          wName  = cleanN(cells[3]?.textContent);
+          resTxt = cells[7]?.textContent?.trim();
+          bName  = cleanN(cells[11]?.textContent) || cleanN(cells[10]?.textContent);
+        } else if (cells.length >= 7) {
+          // Formato sin flag: Bo|No|White|Rtg|Pts|Res|Pts|Black
+          wName  = cleanN(cells[2]?.textContent);
+          resTxt = cells[5]?.textContent?.trim();
+          bName  = cleanN(cells[7]?.textContent) || cleanN(cells[6]?.textContent);
+        }
+      }
+
+      if (!wName || !bName) return;
+      const wP = matchPlayer(wName);
+      const bP = matchPlayer(bName);
+      if (!wP || !bP || wP.no === bP.no) return;
+
+      const key = `r${round}_w${wP.no}_b${bP.no}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      games.push({ key, white:wP.no, black:bP.no, round, board,
+                   wName, bName, result:parseRes(resTxt), resTxt });
+    });
+
+    if (games.length > 0) break;
+  }
+
+  return games.sort((a,b) => a.board - b.board);
+}
+
+// ── PARSEAR CLASIFICACIÓN (art=1) ──────────────────────────
+function parseStandings(html) {
+  const doc   = new DOMParser().parseFromString(html, 'text/html');
+  const stand = [];
+  const tables = [...doc.querySelectorAll('table.CRs1, table')];
+
+  for (const tbl of tables) {
+    const rows = [...tbl.querySelectorAll('tr')];
+    rows.forEach(row => {
+      const cells = [...row.querySelectorAll('td')];
+      if (cells.length < 4) return;
+      const rank = cells[0]?.textContent?.trim();
+      if (!/^\d+$/.test(rank)) return;
+      // Col 1: posible flag/título, col 2 o 1: nombre
+      const nameTry1 = cleanN(cells[2]?.textContent);
+      const nameTry2 = cleanN(cells[1]?.textContent);
+      const name = nameTry1.length > 2 ? nameTry1 : nameTry2;
+      const fed  = (cells[3]||cells[2])?.textContent?.trim().replace(/[^A-Z]/g,'')||'';
+      const rtg  = parseInt(cells[4]?.textContent?.trim())||0;
+      const pts  = cells[cells.length-1]?.textContent?.trim()||'';
+      if (name && name.length > 2) stand.push({rank:+rank, name, fed, rtg, pts});
+    });
+    if (stand.length > 3) break;
+  }
+  return stand;
+}
+
+// ── SYNC PRINCIPAL ─────────────────────────────────────────
+let _syncRunning = false;
+
+async function doSync() {
+  if (_syncRunning) { toast('Sync ya en progreso…'); return; }
+  _syncRunning = true;
+
+  // Navegar al tab admin si no está ahí (para ver el log)
+  const adminView = document.getElementById('view-admin');
+  if (adminView && !adminView.classList.contains('on') && isAdmin()) {
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+    adminView.classList.add('on');
+    document.getElementById('tab-admin')?.classList.add('on');
+  }
+
+  const fdot = document.getElementById('fdot');
+  const flbl = document.getElementById('flbl');
+  const btn  = document.getElementById('syncNowBtn');
+  fdot.className='fdot'; flbl.textContent='SYNC…';
+  if (btn) { btn.disabled=true; btn.textContent='⏳ SYNC…'; }
+  clearSyncLog();
+  syncLog(`🔄 Conectando con chess-results.com (torneo #${TID})…`, 'hi');
+  syncLog(`   Proxies: allorigins.win → codetabs.com (fallback)`);
+
+  let anyOk=false, totalPairs=0, totalRes=0, newRes=0;
+
+  try {
+    // ── PASO 1: Clasificación general ──────────────────────
+    syncLog('');
+    syncLog('── CLASIFICACIÓN (standings) ──────────────', 'hi');
+    try {
+      const html  = await crFetch(`${CR_BASE}?lan=2&art=1`);
+      const stand = parseStandings(html);
+      if (stand.length > 0) {
+        renderStandFromData(stand);
+        syncLog(`✓ ${stand.length} jugadores · Líder: ${stand[0]?.name||'?'} (${stand[0]?.pts||'?'} pts)`, 'ok');
+        anyOk = true;
+      } else {
+        syncLog('⚠ Tabla vacía — torneo aún no iniciado, se muestran datos de ranking inicial.', 'warn');
+      }
+    } catch(e) {
+      syncLog(`✗ No se pudo cargar clasificación: ${e.message}`, 'err');
+    }
+
+    // ── PASO 2: Emparejamientos y resultados por ronda ─────
+    syncLog('');
+    syncLog('── RONDAS (emparejamientos + resultados) ──', 'hi');
+
+    for (let rd = 1; rd <= MAX_RDS; rd++) {
+      try {
+        const crUrl = `${CR_BASE}?lan=2&art=2&rd=${rd}`;
+        syncLog(`  R${rd}: descargando…`);
+        const html  = await crFetch(crUrl);
+        const games = parsePairings(html, rd);
+
+        if (games.length === 0) {
+          syncLog(`  R${rd}: ⚠ sin partidas detectadas (ronda no publicada o formato inesperado)`, 'warn');
+          continue;
+        }
+
+        syncLog(`  R${rd}: ✓ ${games.length} partida(s) encontrada(s)`, 'ok');
+        totalPairs += games.length;
+        anyOk = true;
+
+        // Mostrar detalle de cada partida
+        games.forEach(g => {
+          const resLbl = g.result
+            ? { white:`⬜ ${pn(g.white)} gana`, black:`⬛ ${pn(g.black)} gana`, draw:'🤝 Tablas' }[g.result]
+            : `⏳ pendiente${g.resTxt ? ` (raw:"${g.resTxt}")` : ''}`;
+          syncLog(`     Tbl.${g.board}: ${pn(g.white)} vs ${pn(g.black)} → ${resLbl}`);
+        });
+
+        // Guardar emparejamientos en Firebase
+        const pairData = games.map(g=>({key:g.key, white:g.white, black:g.black, round:g.round}));
+        await window._fb.setPairings(rd, pairData);
+
+        // Aplicar resultados nuevos o corregidos
+        const withRes = games.filter(g => g.result !== null);
+        totalRes += withRes.length;
+
+        for (const g of withRes) {
+          const prev = results.matches?.[g.key];
+          if (!prev) {
+            await saveSnap();
+            await window._fb.setMatchResult(g.key, g.result);
+            newRes++;
+            const lbl = {white:`⬜ ${pn(g.white)}`, black:`⬛ ${pn(g.black)}`, draw:'🤝 Tablas'}[g.result];
+            syncLog(`  R${rd} Tbl.${g.board}: ✅ GUARDADO → ${lbl}`, 'ok');
+          } else if (prev !== g.result) {
+            await window._fb.setMatchResult(g.key, g.result);
+            const lbl = {white:`⬜ ${pn(g.white)}`, black:`⬛ ${pn(g.black)}`, draw:'🤝 Tablas'}[g.result];
+            syncLog(`  R${rd} Tbl.${g.board}: ↻ CORREGIDO → ${lbl}`, 'warn');
+            newRes++;
+          }
+        }
+
+      } catch(e) {
+        syncLog(`  R${rd}: ✗ Error: ${e.message}`, 'err');
+      }
+    }
+
+    // ── Resumen ────────────────────────────────────────────
+    syncLog('');
+    if (anyOk) {
+      fdot.className='fdot on'; flbl.textContent='SYNC OK';
+      const sumario = [
+        `${totalPairs} partidas importadas`,
+        `${totalRes} con resultado`,
+        newRes > 0 ? `${newRes} nuevo(s)` : 'sin cambios nuevos',
+      ].join(' · ');
+      syncLog(`✅ SYNC COMPLETO — ${sumario}`, 'ok');
+      toast(newRes > 0 ? `✓ ${newRes} resultado(s) nuevo(s) importado(s)` : '✓ Sync OK — sin cambios');
+    } else {
+      throw new Error('No se obtuvo información de ninguna ronda');
+    }
+
+  } catch(e) {
+    fdot.className='fdot err'; flbl.textContent='ERROR';
+    syncLog(`✗ SYNC FALLIDO: ${e.message}`, 'err');
+    syncLog('', '');
+    syncLog('¿Qué puede estar pasando?', 'warn');
+    syncLog('  • El torneo aún no empezó y chess-results no tiene datos', 'warn');
+    syncLog('  • Los proxies CORS están caídos o bloqueados', 'warn');
+    syncLog('  • La URL del torneo es incorrecta (verificá el TID)', 'warn');
+    document.getElementById('corswarn').style.display='block';
+    toast('Error de conexión — ver log en ⚙ Admin');
+    setTimeout(()=>{ fdot.className='fdot on'; flbl.textContent='FIREBASE OK'; }, 5000);
+  }
+
+  _syncRunning = false;
+  if (btn) { btn.disabled=false; btn.textContent='↻ SYNC AHORA'; }
+}
+
+// ═══ HELPERS ══════════════════════════════════════════════
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+let _tt;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.className='on';clearTimeout(_tt);_tt=setTimeout(()=>{t.className=''},3500);}
+
+// Auto-sync cada 3 minutos (solo si Firebase está listo y hay sesión)
+setInterval(()=>{ if(window._fbReady && CU) doSync(); }, 3*60*1000);
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBliHwtusObRAFgrTDgFZIwrE0rYpNzecs",
+    authDomain: "granprix2.firebaseapp.com",
+    databaseURL: "https://granprix2-default-rtdb.firebaseio.com",
+    projectId: "granprix2",
+    storageBucket: "granprix2.firebasestorage.app",
+    messagingSenderId: "537573084694",
+    appId: "1:537573084694:web:1cfa404540775e1f01ef37",
+    measurementId: "G-Z2S1E9E02X"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getDatabase(app);
+
+  console.log("Firebase conectado", app);
+</script>
+
+</body>
+</html>
