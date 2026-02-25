@@ -677,6 +677,55 @@ select:focus{border-color:var(--grn)}
   .mrow{gap:6px}
   .pn{font-size:.9rem}
 }
+
+/* ── HELP BUTTON ──────────────────────────────────── */
+#helpBtn{
+  position:fixed;bottom:22px;left:22px;z-index:800;
+  width:46px;height:46px;border-radius:50%;
+  background:var(--bg3);border:2px solid var(--line2);
+  color:var(--tx1);font-family:var(--f-head);font-size:1.3rem;font-weight:700;
+  cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;
+}
+#helpBtn:hover{background:var(--grn);color:#000;border-color:var(--grn);transform:scale(1.1);box-shadow:0 6px 24px rgba(24,233,110,.3)}
+/* ── HELP MODAL ───────────────────────────────────── */
+#helpModal{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.88);backdrop-filter:blur(16px);
+  z-index:900;align-items:center;justify-content:center;padding:18px;
+}
+.helpbox{
+  background:var(--bg2);border:1px solid var(--line2);
+  border-top:2px solid var(--grn);border-radius:var(--radius);
+  padding:26px 24px;width:100%;max-width:490px;
+  max-height:90vh;overflow-y:auto;
+  animation:fadeup .25s ease;
+  box-shadow:0 24px 60px rgba(0,0,0,.7);
+  scrollbar-width:thin;scrollbar-color:var(--bg3) transparent;
+}
+.helphdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.helplogo{font-family:var(--f-head);font-size:1.1rem;font-weight:700;color:var(--grn);letter-spacing:.08em;text-transform:uppercase}
+.helphdr button{background:transparent;border:none;color:var(--tx2);font-size:1.1rem;cursor:pointer;transition:color .15s;line-height:1}
+.helphdr button:hover{color:var(--tx1)}
+.helpsteps{display:flex;flex-direction:column}
+.hstep{display:flex;gap:14px;padding:13px 0}
+.hstep-icon{font-size:1.4rem;flex-shrink:0;width:30px;text-align:center;margin-top:1px}
+.hstep-body{flex:1}
+.hstep-title{font-family:var(--f-head);font-size:.92rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--tx1);margin-bottom:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hstep-desc{font-size:.81rem;color:var(--tx2);line-height:1.65}
+.hstep-desc strong{color:var(--tx1)}
+.hbadge{font-size:.58rem;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:2px;font-family:var(--f-body)}
+.hbadge-grn{background:var(--grndim);color:var(--grn);border:1px solid rgba(24,233,110,.3)}
+.hdivider{height:1px;background:var(--line)}
+.htimeline{display:flex;flex-direction:column;gap:7px;margin-top:7px}
+.htl-row{display:flex;align-items:center;gap:10px;font-size:.81rem;color:var(--tx2)}
+.htl-row strong{color:var(--tx1)}
+.htl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.htl-grn{background:var(--grn)}.htl-amb{background:var(--amber)}.htl-red{background:var(--red)}
+.helpclose{display:block;width:100%;margin-top:20px;font-family:var(--f-head);font-size:.85rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--grn);color:#000;border:none;padding:12px;border-radius:var(--r2);cursor:pointer;transition:filter .15s}
+.helpclose:hover{filter:brightness(1.1)}
+
 </style>
 </head>
 <body>
@@ -813,20 +862,40 @@ select:focus{border-color:var(--grn)}
         <button class="btn bdanger bfull" style="margin-bottom:5px" onclick="adminToggleReg(false)">🔒 CERRAR REGISTRO</button>
         <button class="btn bghost bfull" onclick="adminToggleReg(true)">🟢 ABRIR REGISTRO</button>
       </div>
+      <!-- SYNC INICIAL -->
+      <div class="acard" style="grid-column:1/-1;border-top:2px solid var(--amber)">
+        <h3 style="color:var(--amber)">🏁 SYNC INICIAL — Jugadores &amp; Nacionalidades</h3>
+        <p style="font-size:.8rem;color:var(--tx2);margin-bottom:11px;line-height:1.6">
+          Descarga la lista de participantes desde chess-results, lee nombre, ELO y federación (FED) real de cada jugador.
+          Mantiene los primeros 16 ordenados por ELO para el selector de campeón.<br>
+          <strong style="color:var(--amber)">Ejecutar antes de empezar el torneo.</strong>
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
+          <button id="syncInitBtn" class="btn" style="flex:1;min-width:160px;background:var(--amber);color:#000;font-weight:700" onclick="doSyncInit()">🏁 SYNC INICIAL AHORA</button>
+          <button class="btn bghost" style="flex:1;min-width:120px" onclick="openAdmEdit()">✏ EDITAR CONFIG</button>
+        </div>
+        <div id="urladm" style="font-size:.68rem;font-weight:600;color:var(--tx2);margin-bottom:10px;word-break:break-all;letter-spacing:.04em;text-transform:uppercase;font-family:monospace">URL: chess-results.com/tnr1308555</div>
+        <div id="plbox" style="background:var(--bg);border:1px solid var(--line);padding:8px 12px;font-size:.75rem;line-height:1.7;min-height:40px;max-height:180px;overflow-y:auto;color:var(--tx2);border-radius:var(--r2)">
+          <span style="color:var(--tx3)">— Presioná SYNC INICIAL para cargar jugadores —</span>
+        </div>
+      </div>
+
+      <!-- SYNC RONDAS -->
       <div class="acard" style="grid-column:1/-1">
-        <h3>↻ Sync con chess-results.com</h3>
-        <p style="font-size:.8rem;color:var(--grl);margin-bottom:11px;line-height:1.6">
+        <h3>↻ SYNC RONDAS — Emparejamientos &amp; Resultados</h3>
+        <p style="font-size:.8rem;color:var(--tx2);margin-bottom:11px;line-height:1.6">
           Importa emparejamientos y resultados reales de todas las rondas disponibles.<br>
           Los resultados nuevos se guardan automáticamente y puntúan en tiempo real.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
-          <button id="syncNowBtn" class="btn bprimary" style="flex:1;min-width:140px" onclick="doSync()">↻ SYNC AHORA</button>
-          <button class="btn bghost" style="flex:1;min-width:120px" onclick="openAdmEdit()">✏ EDITAR CONFIG</button>
+          <button id="syncNowBtn" class="btn bprimary" style="flex:1;min-width:140px" onclick="doSync()">↻ SYNC RONDAS AHORA</button>
         </div>
-        <div id="urladm" style="font-family:'Barlow Condensed',sans-serif;font-size:.68rem;font-weight:600;color:var(--grl);margin-bottom:10px;word-break:break-all;letter-spacing:.04em;text-transform:uppercase">URL: chess-results.com/tnr1308555</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gr)">LOG DE SINCRONIZACIÓN</div><button onclick="clearSyncLog()" style="font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--bdr);color:var(--gr);padding:2px 8px;cursor:pointer">✕ LIMPIAR</button></div>
-        <div id="synclog" style="background:var(--blk);border:1px solid var(--bdr);padding:10px 12px;font-family:'Courier New',monospace;font-size:.72rem;line-height:1.7;height:250px;overflow-y:auto;color:var(--grl)">
-          <span style="color:#444">— Presioná SYNC AHORA para sincronizar con chess-results.com —</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2)">LOG DE SINCRONIZACIÓN</div>
+          <button onclick="clearSyncLog()" style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--line);color:var(--tx2);padding:2px 8px;cursor:pointer;border-radius:2px">✕ LIMPIAR</button>
+        </div>
+        <div id="synclog" style="background:var(--bg);border:1px solid var(--line);padding:10px 12px;font-family:'Courier New',monospace;font-size:.72rem;line-height:1.7;height:250px;overflow-y:auto;color:var(--tx2);border-radius:var(--r2)">
+          <span style="color:var(--tx3)">— Presioná SYNC RONDAS para sincronizar con chess-results.com —</span>
         </div>
       </div>
       <div class="acard">
@@ -981,8 +1050,8 @@ async function doAuth(){
     finishLogin(u);
   }
 }
-function finishLogin(u){CU=u;document.getElementById('auth').style.display='none';selChamp=allBets[u]?.champion?.player||null;if(selChamp)document.querySelectorAll('.co').forEach(b=>b.classList.toggle('sel',+b.dataset.no===selChamp));tick();toast(`¡BIENVENIDO, ${u.toUpperCase()}!`);}
-function logout(){CU=null;selChamp=null;document.getElementById('aUser').value='';document.getElementById('aPass').value='';document.getElementById('aErr').textContent='';document.getElementById('auth').style.display='flex';tick();}
+function finishLogin(u){CU=u;document.getElementById('auth').style.display='none';document.getElementById('helpBtn').style.display='flex';selChamp=allBets[u]?.champion?.player||null;if(selChamp)document.querySelectorAll('.co').forEach(b=>b.classList.toggle('sel',+b.dataset.no===selChamp));tick();toast(`¡BIENVENIDO, ${u.toUpperCase()}!`);}
+function logout(){CU=null;selChamp=null;document.getElementById('helpBtn').style.display='none';document.getElementById('aUser').value='';document.getElementById('aPass').value='';document.getElementById('aErr').textContent='';document.getElementById('auth').style.display='flex';tick();}
 
 // ═══ USER BAR ═════════════════════════════════════════════
 function renderUbar(){
@@ -1518,6 +1587,167 @@ function parseStandings(html) {
   return stand;
 }
 
+// ── PARSEAR LISTA DE PARTICIPANTES (art=0) ────────────────
+// chess-results: art=0 = lista de participantes con nombre, fed, elo
+function parseParticipants(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const players = [];
+  const tables = [...doc.querySelectorAll('table.CRs1, table')];
+
+  for (const tbl of tables) {
+    const rows = [...tbl.querySelectorAll('tr')];
+    // Detectar si esta tabla tiene cabecera con "Name" o "Nombre"
+    let hasHeader = false;
+    for (const row of rows.slice(0,3)) {
+      const txt = row.textContent.toLowerCase();
+      if (txt.includes('name') || txt.includes('nombre') || txt.includes('rtg') || txt.includes('elo')) {
+        hasHeader = true; break;
+      }
+    }
+    if (!hasHeader && players.length === 0) continue;
+
+    rows.forEach(row => {
+      const cells = [...row.querySelectorAll('td')];
+      if (cells.length < 4) return;
+
+      // Col 0: número/rank (debe ser dígito)
+      const noTxt = cells[0]?.textContent?.trim();
+      if (!/^\d+$/.test(noTxt)) return;
+      const no = +noTxt;
+
+      // Buscar nombre: celda con más texto (pero no elo/fed)
+      // Estructura típica: No | Title+Name | Fed | Rtg | Club | ...
+      // o: No | Flag | Name | Fed | Rtg | ...
+      let name = '', fed = '', elo = 0;
+
+      // Intentar detectar columnas por contenido
+      // La celda del nombre suele ser la más larga con letras
+      for (let i = 1; i < Math.min(cells.length, 6); i++) {
+        const t = cells[i]?.textContent?.trim() || '';
+        // Fed: exactamente 2-3 letras mayúsculas
+        if (/^[A-Z]{2,3}$/.test(t) && !fed) { fed = t; continue; }
+        // Elo: número 1000-3000
+        const n = +t;
+        if (n >= 1000 && n <= 3300 && !elo) { elo = n; continue; }
+        // Nombre: tiene letras y longitud razonable
+        const clean = cleanN(t);
+        if (clean.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(clean) && !name) {
+          name = clean;
+        }
+      }
+
+      // Fallback posicional si no se detectó por contenido
+      if (!name) {
+        const t1 = cleanN(cells[1]?.textContent || '');
+        const t2 = cleanN(cells[2]?.textContent || '');
+        name = t1.length > t2.length ? t1 : t2;
+      }
+      if (!fed) {
+        // Buscar celda con 2-3 mayúsculas en primeras 6 celdas
+        for (let i = 1; i < Math.min(cells.length, 7); i++) {
+          const t = (cells[i]?.textContent||'').trim().replace(/[^A-Z]/g,'');
+          if (t.length >= 2 && t.length <= 3) { fed = t; break; }
+        }
+      }
+      if (!elo) {
+        for (let i = 1; i < cells.length; i++) {
+          const n = +(cells[i]?.textContent?.trim()||0);
+          if (n >= 1000 && n <= 3300) { elo = n; break; }
+        }
+      }
+
+      if (name && name.length > 2) {
+        players.push({ no, name, fed: fed||'', elo: elo||0 });
+      }
+    });
+    if (players.length > 3) break;
+  }
+  return players;
+}
+
+// ── SYNC INICIAL (jugadores + nacionalidades) ──────────────
+let _syncInitRunning = false;
+
+async function doSyncInit() {
+  if (_syncInitRunning) { toast('Sync inicial ya en progreso…'); return; }
+  _syncInitRunning = true;
+
+  const btn = document.getElementById('syncInitBtn');
+  const box = document.getElementById('plbox');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ CARGANDO…'; }
+  if (box) box.innerHTML = '<span style="color:var(--amber)">Conectando con chess-results.com…</span>';
+
+  try {
+    // Intentar art=0 (lista participantes) primero, luego art=1 (standings)
+    let players = [];
+    const urls = [
+      `${CR_BASE}?lan=2&art=0`,   // lista de participantes
+      `${CR_BASE}?lan=2&art=1`,   // standings (tiene nombre+fed+elo)
+    ];
+
+    for (const url of urls) {
+      try {
+        if (box) box.innerHTML += `<div>Intentando: ${url.split('?')[1]}…</div>`;
+        const fetchedHtml = await crFetch(url);
+        players = parseParticipants(fetchedHtml);
+        if (players.length >= 2) {
+          if (box) box.innerHTML += `<div style="color:#4ade80">✓ ${players.length} jugadores encontrados</div>`;
+          break;
+        }
+      } catch(e) {
+        if (box) box.innerHTML += `<div style="color:#e8001d">✗ ${e.message}</div>`;
+      }
+    }
+
+    if (players.length < 2) {
+      throw new Error('No se encontraron jugadores suficientes');
+    }
+
+    // Ordenar por ELO descendente, tomar los primeros 16
+    players.sort((a,b) => b.elo - a.elo);
+    const top16 = players.slice(0, 16);
+
+    // Actualizar PL en memoria con los datos reales
+    PL.length = 0;
+    top16.forEach((p, i) => {
+      const flag = fedFlag(p.fed);
+      PL.push({ no: i+1, name: p.name, elo: p.elo, fed: p.fed, title: '', flag });
+    });
+
+    // Guardar en Firebase para persistencia
+    await window._fb.setSetting('players', top16.map(p => ({
+      name: p.name, elo: p.elo, fed: p.fed
+    })));
+
+    // Reconstruir selectores con datos actualizados
+    buildCGrid();
+    buildAdmSel();
+    renderStand();
+
+    // Mostrar resultado en el box
+    const rows = top16.map((p,i) =>
+      `<div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid var(--line)">
+        <span style="color:var(--tx3);width:20px;text-align:right;font-size:.7rem">${i+1}</span>
+        <span style="min-width:16px">${fedFlag(p.fed)}</span>
+        <span style="flex:1;font-family:var(--f-head);font-size:.82rem;text-transform:uppercase;color:var(--tx1)">${p.name}</span>
+        <span style="color:var(--amber);font-size:.75rem;font-family:var(--f-head)">${p.elo||'—'}</span>
+        <span style="color:var(--tx3);font-size:.65rem;width:30px">${p.fed}</span>
+      </div>`
+    ).join('');
+    if (box) box.innerHTML =
+      `<div style="color:#4ade80;font-weight:700;margin-bottom:6px">✅ ${top16.length} jugadores cargados · Orderados por ELO</div>` + rows;
+
+    toast(`✅ ${top16.length} jugadores actualizados desde chess-results`);
+
+  } catch(e) {
+    if (box) box.innerHTML += `<div style="color:#e8001d;font-weight:700">✗ ERROR: ${e.message}</div>`;
+    toast('Error en sync inicial — ver panel admin');
+  }
+
+  _syncInitRunning = false;
+  if (btn) { btn.disabled=false; btn.textContent='🏁 SYNC INICIAL AHORA'; }
+}
+
 // ── SYNC PRINCIPAL ─────────────────────────────────────────
 let _syncRunning = false;
 
@@ -1661,5 +1891,76 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 setInterval(()=>{ if(window._fbReady && isAdmin()) doSync(); }, 3*60*1000);
 </script>
 
+
+<!-- HELP BUTTON -->
+<button id="helpBtn" onclick="document.getElementById('helpModal').style.display='flex'" title="Como funciona?" style="display:none">?</button>
+
+<!-- HELP MODAL -->
+<div id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="helpbox">
+    <div class="helphdr">
+      <div class="helplogo">&#9817; C&oacute;mo funciona</div>
+      <button onclick="document.getElementById('helpModal').style.display='none'">&#x2715;</button>
+    </div>
+    <div class="helpsteps">
+
+      <div class="hstep">
+        <div class="hstep-icon">&#127942;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Apost&aacute; al Campe&oacute;n <span class="hbadge hbadge-grn">+5 PTS</span></div>
+          <div class="hstep-desc">Eleg&iacute; qui&eacute;n cre&eacute;s que va a ganar el torneo. Pod&eacute;s cambiar tu elecci&oacute;n hasta que el admin cierre las apuestas, que ocurre <strong>antes de que empiece la Ronda 3</strong>. Si acer&eacute;s, sum&aacute;s <strong>5 puntos</strong>.</div>
+        </div>
+      </div>
+
+      <div class="hdivider"></div>
+
+      <div class="hstep">
+        <div class="hstep-icon">&#9817;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Predec&iacute; cada Partida <span class="hbadge hbadge-grn">+3 PTS</span></div>
+          <div class="hstep-desc">Antes de cada ronda, eleg&iacute; el resultado de cada partida: gana Blancas, gana Negras o Tablas. Las apuestas se cierran <strong>antes de que empiece cada ronda</strong>. Por cada acierto sum&aacute;s <strong>3 puntos</strong>.</div>
+        </div>
+      </div>
+
+      <div class="hdivider"></div>
+
+      <div class="hstep">
+        <div class="hstep-icon">&#128274;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Cierre de Apuestas</div>
+          <div class="hstep-desc">El admin cierra cada ronda justo antes de que empiece. Una vez que aparece <strong>&#128274; RONDA CERRADA</strong>, ya no pod&eacute;s modificar tus picks. Lo mismo aplica al campe&oacute;n: se cierra antes de la Ronda 3.</div>
+        </div>
+      </div>
+
+      <div class="hdivider"></div>
+
+      <div class="hstep">
+        <div class="hstep-icon">&#128202;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Ranking en Tiempo Real</div>
+          <div class="hstep-desc">Los puntos se actualizan autom&aacute;ticamente cuando se cargan los resultados. Las flechas <strong style="color:#18e96e">&#9650; sub&iacute;</strong> y <strong style="color:#e84040">&#9660; baj&eacute;</strong> muestran tu movimiento respecto a la ronda anterior.</div>
+        </div>
+      </div>
+
+      <div class="hdivider"></div>
+
+      <div class="hstep">
+        <div class="hstep-icon">&#9201;</div>
+        <div class="hstep-body">
+          <div class="hstep-title">Resumen de Plazos</div>
+          <div class="hstep-desc">
+            <div class="htimeline">
+              <div class="htl-row"><span class="htl-dot htl-grn"></span><span>Apuesta al <strong>campe&oacute;n</strong> &rarr; cierra antes de Ronda 3</span></div>
+              <div class="htl-row"><span class="htl-dot htl-amb"></span><span>Picks de <strong>partidas</strong> &rarr; cierran antes de cada ronda</span></div>
+              <div class="htl-row"><span class="htl-dot htl-red"></span><span>Una vez cerrado &rarr; <strong>no se puede modificar</strong></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <button class="helpclose" onclick="document.getElementById('helpModal').style.display='none'">ENTENDIDO &rarr;</button>
+  </div>
+</div>
 </body>
 </html>
