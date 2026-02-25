@@ -949,6 +949,8 @@ const ADMIN_USER='admin'; // ← cambiá si querés otro nombre de admin
 const TID='1308555';
 const pn=no=>{const p=PL.find(x=>x.no===no);return p?p.name.split(',')[0].trim():`#${no}`;};
 const pf=no=>{const p=PL.find(x=>x.no===no);return p?p.name:`#${no}`;};
+// pnt = title prefix + last name: "FM Cantero", "Viñales" (no title)
+const pnt=no=>{const p=PL.find(x=>x.no===no);if(!p)return `#${no}`;const ln=p.name.split(',')[0].trim();return p.title?(p.title+' '+ln):ln;};
 const pflag=no=>{const p=PL.find(x=>x.no===no);return p?fedFlag(p.fed):'';};
 const FED_FLAGS={
   PAR:'PAR',BRA:'BRA',ARG:'ARG',USA:'USA',RUS:'RUS',
@@ -1118,7 +1120,7 @@ function renderUbar(){
 }
 
 // ═══ CHAMPION ═════════════════════════════════════════════
-function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${fedFlag(p.fed)} ${pn(p.no)}${p.title?' <span style="font-size:.58rem;color:var(--tx3)">('+p.title+')</span>':''}</span><span class="celo">${p.elo}</span></div>`).join('');}
+function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${fedFlag(p.fed)} ${pnt(p.no)}</span><span class="celo">${p.elo}</span></div>`).join('');}
 function selC(el,no){if(locks.champion)return toast('Las apuestas al campeón están cerradas.');selChamp=no;document.querySelectorAll('.co').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
 async function betChampion(){
   if(!CU)return toast('Iniciá sesión.');
@@ -1158,17 +1160,17 @@ function renderPairings(){
 }
 
 function matchCard(g,rlk){
-  if(!CU)return`<div class="pair"><div class="pinner"><div class="mrow"><div class="ps"><div class="pn">${pn(g.white)}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${PL.find(x=>x.no===g.white)?.elo||'—'}</span></div></div><div class="vs">VS</div><div class="ps r"><div class="pn">${pn(g.black)}</div><div class="psub"><span class="pelo">${PL.find(x=>x.no===g.black)?.elo||'—'}</span><span class="pip pipb"></span></div></div></div><div class="nouser">INGRESÁ PARA PREDECIR</div></div></div>`;
+  if(!CU)return`<div class="pair"><div class="pinner"><div class="mrow"><div class="ps"><div class="pn">${pnt(g.white)}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${PL.find(x=>x.no===g.white)?.elo||'—'}</span></div></div><div class="vs">VS</div><div class="ps r"><div class="pn">${pnt(g.black)}</div><div class="psub"><span class="pelo">${PL.find(x=>x.no===g.black)?.elo||'—'}</span><span class="pip pipb"></span></div></div></div><div class="nouser">INGRESÁ PARA PREDECIR</div></div></div>`;
   const myP=allBets[CU]?.matches?.[g.key]?.pick||null;
   const res=results.matches?.[g.key]||null,past=!!res;
   const cor=myP&&res&&myP===res,wr=myP&&res&&myP!==res;
   const rl=res==='white'?'1-0':res==='black'?'0-1':res==='draw'?'½-½':'—';
   const rc=res==='white'?'ww':res==='black'?'bw':res==='draw'?'dr':'nd';
-  const wl=pn(g.white),bl=pn(g.black);
   const wfl=pflag(g.white),bfl=pflag(g.black);
   const wp=PL.find(x=>x.no===g.white),bp=PL.find(x=>x.no===g.black);
   const we=wp?.elo||'—',be=bp?.elo||'—';
   const wfed=wp?.fed||'',bfed=bp?.fed||'';
+  const wl=pnt(g.white),bl=pnt(g.black);
   const dis=past||rlk;
   const pbc=t=>{if(!myP)return'';if(myP===t&&res)return res===t?'ok':'bad';if(myP===t&&!res)return t==='white'?'sw':t==='draw'?'sd':'sb';return'';};
   let rbar='';
@@ -1179,7 +1181,7 @@ function matchCard(g,rlk){
     rbar=`<div class="rbar ${cls}">${txt}${verd?' &nbsp;·&nbsp; '+verd:''}</div>`;
   }
   return`<div class="pair${myP?' hpred':''}${cor?' cor':''}${wr?' wr':''}"><div class="pinner">
-    <div class="brow"><span class="bnum">Tablero ${g.key.split('_')[0].replace('r','Ronda ')}</span><span class="rtag ${rc}">${rl}</span></div>
+    <div class="brow"><span class="bnum">Tablero ${g.board} &middot; Ronda ${g.round}</span><span class="rtag ${rc}">${rl}</span></div>
     <div class="mrow">
       <div class="ps"><div class="pn">${wfl} ${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span>${wfed?'<span style="font-size:.62rem;color:var(--tx3);font-weight:600;margin-left:3px">'+wfed+'</span>':''}</div></div>
       <div class="vs">vs</div>
