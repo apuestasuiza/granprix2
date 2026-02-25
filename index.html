@@ -1619,25 +1619,18 @@ setInterval(()=>{ if(window._fbReady && CU) doSync(); }, 3*60*1000);
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyBliHwtusObRAFgrTDgFZIwrE0rYpNzecs",
-    authDomain: "granprix2.firebaseapp.com",
-    databaseURL: "https://granprix2-default-rtdb.firebaseio.com",
-    projectId: "granprix2",
-    storageBucket: "granprix2.firebasestorage.app",
-    messagingSenderId: "537573084694",
-    appId: "1:537573084694:web:1cfa404540775e1f01ef37",
-    measurementId: "G-Z2S1E9E02X"
+    apiKey: "AIzaSyAZuzubERirYKoz5FbKPrKv4Z0T9eWpjEg",
+    authDomain: "granprix2-b935d.firebaseapp.com",
+    projectId: "granprix2-b935d",
+    storageBucket: "granprix2-b935d.firebasestorage.app",
+    messagingSenderId: "642221025518",
+    appId: "1:642221025518:web:a3d0e40c940418a17bebff"
   };
 
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getDatabase(app);
-
-  console.log("Firebase conectado", app);
+  console.log("Firebase inicializado", app);
 </script>
 
 </body>
