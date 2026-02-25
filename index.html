@@ -1305,7 +1305,7 @@ function renderStandFromData(stand) {
 }
 
 // ═══ ADMIN ════════════════════════════════════════════════
-function buildAdmSel(){document.getElementById('achampsel').innerHTML=`<option value="">— Elegí el campeón —</option>`+PL.map(p=>`<option value="${p.no}">${p.name} (${p.elo})</option>`).join('');}
+function buildAdmSel(){document.getElementById('achampsel').innerHTML=`<option value="">— Elegí el campeón —</option>`+PL.map(p=>`<option value="${p.no}">${p.name}${p.title?' ('+p.title+')':''} · ${p.fed||'?'} · ${p.elo}</option>`).join('');}
 function buildAdmRounds(){
   document.getElementById('admrounds').innerHTML=liveR.map(rd=>`
     <div class="arblock" id="arb-${rd.r}">
@@ -1442,8 +1442,13 @@ async function crFetch(crUrl) {
 }
 
 // ── LIMPIEZA Y MATCHING DE JUGADORES ──────────────────────
-const TITLE_RE = /^\s*(GM|IM|FM|CM|NM|WGM|WIM|WFM|WCM|AFM|AIM|AGM)\s+/i;
+const TITLE_RE = /^\s*(GM|IM|FM|CM|NM|WGM|WIM|WFM|WCM|AFM|AIM|AGM|ACM|IA|ARB)\s+/i;
 const cleanN = s => (s||'').replace(TITLE_RE,'').trim();
+// Returns {name, title} extracting chess title prefix from raw cell text
+const extractNT = s => {
+  const m = (s||'').trim().match(TITLE_RE);
+  return { name: cleanN(s), title: m ? m[1].toUpperCase() : '' };
+};
 
 function matchPlayer(raw) {
   if (!raw || raw.trim().length < 2) return null;
@@ -1621,7 +1626,7 @@ function parsePairings(html, round) {
 function parseStandings(html) {
   const doc   = new DOMParser().parseFromString(html, 'text/html');
   const stand = [];
-  const TITLES_ST = new Set(['GM','IM','FM','CM','NM','WGM','WIM','WFM','WCM','AFM','AIM','AGM','ACM','IA','ARB']);
+  const CHESS_TITLES = new Set(['GM','IM','FM','CM','NM','WGM','WIM','WFM','WCM','AFM','AIM','AGM','ACM','IA','ARB']);
   const tables = [...doc.querySelectorAll('table.CRs1, table')];
 
   for (const tbl of tables) {
@@ -1634,25 +1639,31 @@ function parseStandings(html) {
 
       let name='', fed='', rtg=0, title='', pts='';
 
-      // Scan cells 1..N classifying each
       for (let i=1; i<cells.length; i++) {
         const raw = cells[i]?.textContent?.trim()||'';
-        const up  = raw.replace(/[^A-Za-z]/g,'').toUpperCase();
-        const num = +raw;
-
         if (!raw) continue;
-        // pts: last numeric or x.x pattern — handled separately
-        if (/^\d+$/.test(raw) && num >= 1000 && num <= 3300 && !rtg) { rtg=num; continue; }
-        if (TITLES_ST.has(up) && raw.length<=4 && !title) { title=up; continue; }
-        // fed: 3 uppercase letters, not a title
-        if (/^[A-Z]{3}$/.test(up) && !TITLES_ST.has(up) && !fed) { fed=up; continue; }
-        if (/^[A-Z]{2}$/.test(up) && !TITLES_ST.has(up) && !fed) { fed=up; continue; }
-        // name: longer text
-        const clean = cleanN(raw);
-        if (clean.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(clean) && !name) { name=clean; continue; }
+        const num = +raw;
+        const upOnly = raw.replace(/[^A-Za-z]/g,'').toUpperCase();
+
+        // ELO rating: 4-digit number in range
+        if (/^\d{3,4}$/.test(raw) && num >= 800 && num <= 3300 && !rtg) { rtg=num; continue; }
+
+        // Standalone title cell (exact match like "CM", "FM")
+        if (CHESS_TITLES.has(upOnly) && raw.trim().length <= 4 && !title) { title=upOnly; continue; }
+
+        // Federation: 2-3 uppercase letters that are NOT a chess title
+        if (/^[A-Z]{2,3}$/.test(raw.trim()) && !CHESS_TITLES.has(raw.trim()) && !fed) { fed=raw.trim(); continue; }
+
+        // Name cell: extract title prefix if embedded (e.g. "CM Cantero, Rodolfo")
+        const nt = extractNT(raw);
+        if (nt.name.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚàèìòùäëïöüñçÀÈÌÒÙ]/.test(nt.name) && !name) {
+          name = nt.name;
+          if (nt.title && !title) title = nt.title;
+          continue;
+        }
       }
 
-      // pts = last cell (score column in standings)
+      // Score/pts is always the last meaningful cell
       pts = cells[cells.length-1]?.textContent?.trim()||'';
 
       if (name && name.length > 2) stand.push({rank:+rank, name, fed, rtg, pts, title});
@@ -1730,10 +1741,12 @@ function parseParticipants(html) {
           fed = up; continue;
         }
 
-        // Name: longer text with letters — strip title prefix if embedded
-        const clean = cleanN(raw);
-        if (clean.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚàèìòùäëïöüñçÀÈÌÒÙÄËÏÖÜÑÇ]/.test(clean) && !name) {
-          name = clean; continue;
+        // Name: longer text with letters — extract embedded title if present
+        const nt = extractNT(raw);
+        if (nt.name.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚàèìòùäëïöüñçÀÈÌÒÙÄËÏÖÜÑÇ]/.test(nt.name) && !name) {
+          name = nt.name;
+          if (nt.title && !title) title = nt.title;
+          continue;
         }
       }
 
