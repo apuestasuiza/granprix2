@@ -239,6 +239,8 @@ header{
   transition:all .15s;border-radius:var(--r2);
 }
 .syncbtn:hover{border-color:var(--grn);color:var(--grn);background:var(--grndim)}
+/* Ocultar elementos de admin para usuarios normales */
+.admin-only{display:none !important}
 
 /* ── NAV ───────────────────────────────────────────── */
 nav{
@@ -709,7 +711,7 @@ select:focus{border-color:var(--grn)}
     </div>
     <div class="live-badge">EN VIVO</div>
     <div class="fbadge"><div class="fdot" id="fdot"></div><span id="flbl">Conectando…</span></div>
-    <button class="syncbtn" onclick="doSync()">↻ SYNC</button>
+    <button class="syncbtn admin-only" id="syncBtn" onclick="doSync()">↻ SYNC</button>
   </div>
 </header>
 
@@ -719,11 +721,11 @@ select:focus{border-color:var(--grn)}
   <button class="tab"    onclick="showTab('mispicks',this)">Mis picks</button>
   <button class="tab"    onclick="showTab('ranking',this)">Ranking</button>
   <button class="tab"    onclick="showTab('clasif',this)">Clasificación</button>
-  <button class="tab" id="tab-admin" style="display:none" onclick="showTab('admin',this)">⚙ Admin</button>
+  <button class="tab admin-only" id="tab-admin" style="display:none" onclick="showTab('admin',this)">⚙ Admin</button>
 </nav>
 
-<!-- ADMIN CONFIG MODAL -->
-<div id="admModal">
+<!-- ADMIN CONFIG MODAL (solo visible para admin pero controlado por JS) -->
+<div id="admModal" class="admin-only">
   <div class="admbox">
     <div class="admhdr">
       <h2>⚙ CONFIGURACIÓN</h2>
@@ -784,11 +786,11 @@ select:focus{border-color:var(--grn)}
   <!-- CLASIFICACIÓN -->
   <div id="view-clasif" class="view">
     <div class="sh"><h2>CLASIFI<em>CACIÓN</em></h2><div class="chip cout">EN VIVO</div></div>
-    <div class="wbox" id="corswarn" style="display:none"><b>⚠ SIN ACCESO CORS</b>Visitá: <code>chess-results.com/tnr1308555</code></div>
+    <div class="wbox admin-only" id="corswarn" style="display:none"><b>⚠ SIN ACCESO CORS</b>Visitá: <code>chess-results.com/tnr1308555</code></div>
     <div id="standbox"></div>
   </div>
 
-  <!-- ADMIN -->
+  <!-- ADMIN (solo visible para admin) -->
   <div id="view-admin" class="view">
     <div class="sh"><h2>PANEL <em>ADMIN</em></h2></div>
     <div class="agrid">
@@ -908,10 +910,39 @@ function setFb(ok,err=false){
   d.className='fdot'+(ok?' on':err?' err':'');
   l.textContent=ok?'FIREBASE OK':err?'ERROR FIREBASE':'Conectando…';
 }
+
+// ═══ FUNCIÓN PARA MOSTRAR/OCULTAR ELEMENTOS DE ADMIN ══════
+function updateAdminVisibility() {
+  const adminElements = document.querySelectorAll('.admin-only');
+  const isUserAdmin = isAdmin();
+  
+  adminElements.forEach(el => {
+    if (isUserAdmin) {
+      el.classList.remove('admin-only');
+      // Casos especiales: el modal de admin y el tab admin tienen estilos específicos
+      if (el.id === 'tab-admin') el.style.display = '';
+      if (el.id === 'corswarn') el.style.display = 'none'; // se maneja aparte
+    } else {
+      el.classList.add('admin-only');
+    }
+  });
+  
+  // Mostrar/ocultar el botón SYNC en el header
+  const syncBtn = document.getElementById('syncBtn');
+  if (syncBtn) {
+    if (isUserAdmin) {
+      syncBtn.classList.remove('admin-only');
+    } else {
+      syncBtn.classList.add('admin-only');
+    }
+  }
+}
+
 function tick(){
   renderLB();renderAdmStats();updateAdmResults();
   if(CU){renderUbar();renderChampState();renderRounds();renderPairings();renderMyBets();}
-  const at=document.getElementById('tab-admin');if(at)at.style.display=isAdmin()?'':'none';
+  updateAdminVisibility(); // ← Actualizar visibilidad de elementos admin
+  
   const rc=settings.registrationOpen===false;
   const rn=document.getElementById('reg-notice');if(rn)rn.style.display=rc?'block':'none';
   const tr=document.getElementById('tab-reg');
@@ -952,7 +983,7 @@ async function doAuth(){
   }
 }
 function finishLogin(u){CU=u;document.getElementById('auth').style.display='none';selChamp=allBets[u]?.champion?.player||null;if(selChamp)document.querySelectorAll('.co').forEach(b=>b.classList.toggle('sel',+b.dataset.no===selChamp));tick();toast(`¡BIENVENIDO, ${u.toUpperCase()}!`);}
-function logout(){CU=null;selChamp=null;document.getElementById('aUser').value='';document.getElementById('aPass').value='';document.getElementById('aErr').textContent='';document.getElementById('auth').style.display='flex';}
+function logout(){CU=null;selChamp=null;document.getElementById('aUser').value='';document.getElementById('aPass').value='';document.getElementById('aErr').textContent='';document.getElementById('auth').style.display='flex';tick();}
 
 // ═══ USER BAR ═════════════════════════════════════════════
 function renderUbar(){
@@ -1626,8 +1657,8 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 let _tt;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.className='on';clearTimeout(_tt);_tt=setTimeout(()=>{t.className=''},3500);}
 
-// Auto-sync cada 3 minutos (solo si Firebase está listo y hay sesión)
-setInterval(()=>{ if(window._fbReady && CU) doSync(); }, 3*60*1000);
+// Auto-sync cada 3 minutos (solo si Firebase está listo y hay sesión y es admin)
+setInterval(()=>{ if(window._fbReady && isAdmin()) doSync(); }, 3*60*1000);
 </script>
 
 </body>
