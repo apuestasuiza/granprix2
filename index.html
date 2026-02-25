@@ -949,7 +949,7 @@ const ADMIN_USER='admin'; // ← cambiá si querés otro nombre de admin
 const TID='1308555';
 const pn=no=>{const p=PL.find(x=>x.no===no);return p?p.name.split(',')[0].trim():`#${no}`;};
 const pf=no=>{const p=PL.find(x=>x.no===no);return p?p.name:`#${no}`;};
-const pflag=no=>{const p=PL.find(x=>x.no===no);return p?.flag||'🇵🇾';};
+const pflag=no=>{const p=PL.find(x=>x.no===no);return p?fedFlag(p.fed):'';};
 const FED_FLAGS={
   PAR:'PAR',BRA:'BRA',ARG:'ARG',USA:'USA',RUS:'RUS',
   GER:'GER',ESP:'ESP',FRA:'FRA',ITA:'ITA',CHI:'CHI',
@@ -1118,7 +1118,7 @@ function renderUbar(){
 }
 
 // ═══ CHAMPION ═════════════════════════════════════════════
-function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${p.flag||'🇵🇾'} ${pn(p.no)}</span><span class="celo">${p.elo}</span></div>`).join('');}
+function buildCGrid(){document.getElementById('cgrid').innerHTML=PL.map(p=>`<div class="co" data-no="${p.no}" onclick="selC(this,${p.no})"><span class="cseed">${p.no}</span><span class="cname">${fedFlag(p.fed)} ${pn(p.no)}${p.title?' <span style="font-size:.58rem;color:var(--tx3)">('+p.title+')</span>':''}</span><span class="celo">${p.elo}</span></div>`).join('');}
 function selC(el,no){if(locks.champion)return toast('Las apuestas al campeón están cerradas.');selChamp=no;document.querySelectorAll('.co').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
 async function betChampion(){
   if(!CU)return toast('Iniciá sesión.');
@@ -1166,7 +1166,9 @@ function matchCard(g,rlk){
   const rc=res==='white'?'ww':res==='black'?'bw':res==='draw'?'dr':'nd';
   const wl=pn(g.white),bl=pn(g.black);
   const wfl=pflag(g.white),bfl=pflag(g.black);
-  const we=PL.find(x=>x.no===g.white)?.elo||'—',be=PL.find(x=>x.no===g.black)?.elo||'—';
+  const wp=PL.find(x=>x.no===g.white),bp=PL.find(x=>x.no===g.black);
+  const we=wp?.elo||'—',be=bp?.elo||'—';
+  const wfed=wp?.fed||'',bfed=bp?.fed||'';
   const dis=past||rlk;
   const pbc=t=>{if(!myP)return'';if(myP===t&&res)return res===t?'ok':'bad';if(myP===t&&!res)return t==='white'?'sw':t==='draw'?'sd':'sb';return'';};
   let rbar='';
@@ -1179,9 +1181,9 @@ function matchCard(g,rlk){
   return`<div class="pair${myP?' hpred':''}${cor?' cor':''}${wr?' wr':''}"><div class="pinner">
     <div class="brow"><span class="bnum">Tablero ${g.key.split('_')[0].replace('r','Ronda ')}</span><span class="rtag ${rc}">${rl}</span></div>
     <div class="mrow">
-      <div class="ps"><div class="pn">${wfl} ${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span></div></div>
+      <div class="ps"><div class="pn">${wfl} ${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span>${wfed?'<span style="font-size:.62rem;color:var(--tx3);font-weight:600;margin-left:3px">'+wfed+'</span>':''}</div></div>
       <div class="vs">vs</div>
-      <div class="ps r"><div class="pn">${bfl} ${bl}</div><div class="psub"><span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
+      <div class="ps r"><div class="pn">${bfl} ${bl}</div><div class="psub">${bfed?'<span style="font-size:.62rem;color:var(--tx3);font-weight:600;margin-right:3px">'+bfed+'</span>':''}<span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
     </div>
     <div class="plabel">Tu predicción</div>
     <div class="prow">
@@ -1282,7 +1284,7 @@ function renderStand() {
     <div class="stlist">${src.map((p,i)=>`
     <div class="strow">
       <div class="stpos${i<3?' top':''}">${i+1}</div>
-      <div><div class="stname">${fedFlag(p.fed)} ${p.name.split(',')[0]}</div><div class="stmeta">${p.fed}${p.title?' · '+p.title:''}</div></div>
+      <div><div class="stname">${fedFlag(p.fed)} ${p.name.split(',')[0]}${p.title?' <span style="font-size:.6rem;color:var(--tx3);font-weight:500">('+p.title+')</span>':''}</div><div class="stmeta">${p.fed}</div></div>
       <div class="stelo">${p.elo||'—'}</div>
       <div class="stsc" style="color:var(--tx3)">—</div>
     </div>`).join('')}</div>`;
@@ -1296,7 +1298,7 @@ function renderStandFromData(stand) {
     <div class="stlist">${stand.map(p=>`
     <div class="strow">
       <div class="stpos${p.rank<=3?' top':''}">${p.rank}</div>
-      <div><div class="stname">${fedFlag(p.fed)} ${(p.name||'').split(',')[0]||p.name}</div><div class="stmeta">${p.fed||''}</div></div>
+      <div><div class="stname">${fedFlag(p.fed)} ${(p.name||'').split(',')[0]||p.name}${p.title?' <span style="font-size:.6rem;color:var(--tx3);font-weight:500">('+p.title+')</span>':''}</div><div class="stmeta">${p.fed||''}</div></div>
       <div class="stelo">${p.rtg||'—'}</div>
       <div class="stsc">${p.pts||'—'}</div>
     </div>`).join('')}</div>`;
@@ -1619,6 +1621,7 @@ function parsePairings(html, round) {
 function parseStandings(html) {
   const doc   = new DOMParser().parseFromString(html, 'text/html');
   const stand = [];
+  const TITLES_ST = new Set(['GM','IM','FM','CM','NM','WGM','WIM','WFM','WCM','AFM','AIM','AGM','ACM','IA','ARB']);
   const tables = [...doc.querySelectorAll('table.CRs1, table')];
 
   for (const tbl of tables) {
@@ -1628,14 +1631,31 @@ function parseStandings(html) {
       if (cells.length < 4) return;
       const rank = cells[0]?.textContent?.trim();
       if (!/^\d+$/.test(rank)) return;
-      // Col 1: posible flag/título, col 2 o 1: nombre
-      const nameTry1 = cleanN(cells[2]?.textContent);
-      const nameTry2 = cleanN(cells[1]?.textContent);
-      const name = nameTry1.length > 2 ? nameTry1 : nameTry2;
-      const fed  = (cells[3]||cells[2])?.textContent?.trim().replace(/[^A-Z]/g,'')||'';
-      const rtg  = parseInt(cells[4]?.textContent?.trim())||0;
-      const pts  = cells[cells.length-1]?.textContent?.trim()||'';
-      if (name && name.length > 2) stand.push({rank:+rank, name, fed, rtg, pts});
+
+      let name='', fed='', rtg=0, title='', pts='';
+
+      // Scan cells 1..N classifying each
+      for (let i=1; i<cells.length; i++) {
+        const raw = cells[i]?.textContent?.trim()||'';
+        const up  = raw.replace(/[^A-Za-z]/g,'').toUpperCase();
+        const num = +raw;
+
+        if (!raw) continue;
+        // pts: last numeric or x.x pattern — handled separately
+        if (/^\d+$/.test(raw) && num >= 1000 && num <= 3300 && !rtg) { rtg=num; continue; }
+        if (TITLES_ST.has(up) && raw.length<=4 && !title) { title=up; continue; }
+        // fed: 3 uppercase letters, not a title
+        if (/^[A-Z]{3}$/.test(up) && !TITLES_ST.has(up) && !fed) { fed=up; continue; }
+        if (/^[A-Z]{2}$/.test(up) && !TITLES_ST.has(up) && !fed) { fed=up; continue; }
+        // name: longer text
+        const clean = cleanN(raw);
+        if (clean.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(clean) && !name) { name=clean; continue; }
+      }
+
+      // pts = last cell (score column in standings)
+      pts = cells[cells.length-1]?.textContent?.trim()||'';
+
+      if (name && name.length > 2) stand.push({rank:+rank, name, fed, rtg, pts, title});
     });
     if (stand.length > 3) break;
   }
@@ -1647,15 +1667,19 @@ function parseStandings(html) {
 function parseParticipants(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const players = [];
+  // Chess titles — never a federation code
+  const TITLES = new Set(['GM','IM','FM','CM','NM','WGM','WIM','WFM','WCM','AFM','AIM','AGM','ACM','WCM','FIDE','ARB','IA']);
+  // Known 3-letter federation codes (countries) — helps disambiguate from titles
+  const FEDS = new Set(['PAR','BRA','ARG','USA','RUS','GER','ESP','FRA','ITA','CHI','PER','COL','VEN','URU','BOL','MEX','POL','NED','HUN','IND','CHN','JPN','KOR','POR','CZE','CRO','SRB','UKR','ARM','AZE','ENG','SCO','WAL','ECU','CUB','DOM','PAN','GUA','HON','CRC','NIC','HAI','TRI','JAM','BAR','PUR','ISR','TUR','GRE','BUL','SLO','SVK','DEN','SWE','NOR','FIN','BEL','SUI','AUT','CAN','AUS','NZL','RSA','EGY','MAR','TUN','ALG','NGR','KEN','GHA','SEN','ETH','ZAM','ZIM','UGA','TAN','LBA']);
+
   const tables = [...doc.querySelectorAll('table.CRs1, table')];
 
   for (const tbl of tables) {
     const rows = [...tbl.querySelectorAll('tr')];
-    // Detectar si esta tabla tiene cabecera con "Name" o "Nombre"
     let hasHeader = false;
     for (const row of rows.slice(0,3)) {
       const txt = row.textContent.toLowerCase();
-      if (txt.includes('name') || txt.includes('nombre') || txt.includes('rtg') || txt.includes('elo')) {
+      if (txt.includes('name') || txt.includes('nombre') || txt.includes('rtg') || txt.includes('elo') || txt.includes('fed')) {
         hasHeader = true; break;
       }
     }
@@ -1665,54 +1689,56 @@ function parseParticipants(html) {
       const cells = [...row.querySelectorAll('td')];
       if (cells.length < 4) return;
 
-      // Col 0: número/rank (debe ser dígito)
       const noTxt = cells[0]?.textContent?.trim();
       if (!/^\d+$/.test(noTxt)) return;
       const no = +noTxt;
 
-      // Buscar nombre: celda con más texto (pero no elo/fed)
-      // Estructura típica: No | Title+Name | Fed | Rtg | Club | ...
-      // o: No | Flag | Name | Fed | Rtg | ...
-      let name = '', fed = '', elo = 0;
+      let name = '', fed = '', elo = 0, title = '';
 
-      // Intentar detectar columnas por contenido
-      // La celda del nombre suele ser la más larga con letras
-      for (let i = 1; i < Math.min(cells.length, 6); i++) {
-        const t = cells[i]?.textContent?.trim() || '';
-        // Fed: exactamente 2-3 letras mayúsculas
-        if (/^[A-Z]{2,3}$/.test(t) && !fed) { fed = t; continue; }
-        // Elo: número 1000-3000
-        const n = +t;
-        if (n >= 1000 && n <= 3300 && !elo) { elo = n; continue; }
-        // Nombre: tiene letras y longitud razonable
-        const clean = cleanN(t);
-        if (clean.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(clean) && !name) {
-          name = clean;
-        }
-      }
+      // chess-results typical columns:
+      // No | Title | Name | Fed | Rtg | Club | ...  (title in own cell)
+      // No | Name  | Fed  | Rtg | Club | ...         (title inside name cell)
+      // No | Flag  | Name | Fed | Rtg | ...          (flag image cell)
 
-      // Fallback posicional si no se detectó por contenido
-      if (!name) {
-        const t1 = cleanN(cells[1]?.textContent || '');
-        const t2 = cleanN(cells[2]?.textContent || '');
-        name = t1.length > t2.length ? t1 : t2;
-      }
-      if (!fed) {
-        // Buscar celda con 2-3 mayúsculas en primeras 6 celdas
-        for (let i = 1; i < Math.min(cells.length, 7); i++) {
-          const t = (cells[i]?.textContent||'').trim().replace(/[^A-Z]/g,'');
-          if (t.length >= 2 && t.length <= 3) { fed = t; break; }
+      // Pass 1: scan all cells, classify each
+      const cellData = Array.from(cells).map(c => c.textContent.trim());
+
+      for (let i = 1; i < Math.min(cellData.length, 8); i++) {
+        const raw = cellData[i];
+        const up  = raw.replace(/[^A-Za-z]/g,'').toUpperCase();
+        const num = +raw;
+
+        // Skip empty or image-only cells
+        if (!raw || raw.length === 0) continue;
+
+        // ELO: pure number 1000-3300
+        if (/^\d+$/.test(raw) && num >= 1000 && num <= 3300 && !elo) {
+          elo = num; continue;
         }
-      }
-      if (!elo) {
-        for (let i = 1; i < cells.length; i++) {
-          const n = +(cells[i]?.textContent?.trim()||0);
-          if (n >= 1000 && n <= 3300) { elo = n; break; }
+
+        // Title: known title codes (exact match, standalone cell)
+        if (TITLES.has(up) && raw.length <= 4 && !title) {
+          title = up; continue;
+        }
+
+        // Federation: known 3-letter country code, NOT a title
+        if (FEDS.has(up) && up.length === 3 && !fed) {
+          fed = up; continue;
+        }
+        // Also accept 2-letter codes that aren't titles (e.g. some FIDE codes)
+        if (/^[A-Z]{2,3}$/.test(up) && !TITLES.has(up) && !fed && raw === up) {
+          fed = up; continue;
+        }
+
+        // Name: longer text with letters — strip title prefix if embedded
+        const clean = cleanN(raw);
+        if (clean.length > 3 && /[a-zA-ZáéíóúÁÉÍÓÚàèìòùäëïöüñçÀÈÌÒÙÄËÏÖÜÑÇ]/.test(clean) && !name) {
+          name = clean; continue;
         }
       }
 
       if (name && name.length > 2) {
-        players.push({ no, name, fed: fed||'', elo: elo||0 });
+        players.push({ no, name, fed: fed||'', elo: elo||0, title: title||'' });
       }
     });
     if (players.length > 3) break;
@@ -1788,7 +1814,7 @@ async function doSyncInit() {
       `<div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid var(--line)">
         <span style="color:var(--tx3);width:20px;text-align:right;font-size:.7rem">${i+1}</span>
         <span>${fedFlag(p.fed)}</span>
-        <span style="flex:1;font-family:var(--f-head);font-size:.82rem;text-transform:uppercase;color:var(--tx1)">${p.name}</span>
+        <span style="flex:1;font-family:var(--f-head);font-size:.82rem;text-transform:uppercase;color:var(--tx1)">${p.name}${p.title?' <span style="font-size:.6rem;color:var(--tx3)">('+p.title+')</span>':''}</span>
         <span style="color:var(--amber);font-size:.75rem;font-family:var(--f-head)">${p.elo||'—'}</span>
       </div>`
     ).join('');
