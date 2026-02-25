@@ -982,7 +982,7 @@ const fedFlag=fed=>{
   const col=FED_COLORS[k];
   const bg=col?col.bg:'#444';
   const tx=col?col.tx:'#fff';
-  return \`<span class="fed-badge" style="background:\${bg};color:\${tx}">\${k||fed}</span>\`;
+  return '<span class="fed-badge" style="background:'+bg+';color:'+tx+'">'+( k||fed)+'</span>';
 };
 
 // ═══ STATE ════════════════════════════════════════════════
