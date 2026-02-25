@@ -726,6 +726,14 @@ select:focus{border-color:var(--grn)}
 .helpclose{display:block;width:100%;margin-top:20px;font-family:var(--f-head);font-size:.85rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--grn);color:#000;border:none;padding:12px;border-radius:var(--r2);cursor:pointer;transition:filter .15s}
 .helpclose:hover{filter:brightness(1.1)}
 
+
+/* ── FEDERATION BADGE ──────────────────────────────── */
+.fed-badge{
+  display:inline-block;font-size:.55rem;font-weight:700;
+  letter-spacing:.06em;padding:1px 4px;border-radius:2px;
+  vertical-align:middle;font-family:var(--f-body);line-height:1.5;
+  flex-shrink:0;
+}
 </style>
 </head>
 <body>
@@ -864,14 +872,14 @@ select:focus{border-color:var(--grn)}
       </div>
       <!-- SYNC INICIAL -->
       <div class="acard" style="grid-column:1/-1;border-top:2px solid var(--amber)">
-        <h3 style="color:var(--amber)">🏁 SYNC INICIAL — Jugadores &amp; Nacionalidades</h3>
+        <h3 style="color:var(--amber)">🏁 SYNC TOTAL — Jugadores &amp; Nacionalidades</h3>
         <p style="font-size:.8rem;color:var(--tx2);margin-bottom:11px;line-height:1.6">
           Descarga la lista de participantes desde chess-results, lee nombre, ELO y federación (FED) real de cada jugador.
           Mantiene los primeros 16 ordenados por ELO para el selector de campeón.<br>
-          <strong style="color:var(--amber)">Ejecutar antes de empezar el torneo.</strong>
+          <strong style="color:var(--amber)">Ejecutar antes de empezar el torneo y cada vez que se inscriban nuevos jugadores.</strong>
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
-          <button id="syncInitBtn" class="btn" style="flex:1;min-width:160px;background:var(--amber);color:#000;font-weight:700" onclick="doSyncInit()">🏁 SYNC INICIAL AHORA</button>
+          <button id="syncInitBtn" class="btn" style="flex:1;min-width:160px;background:var(--amber);color:#000;font-weight:700" onclick="doSyncInit()">🏁 SYNC TOTAL AHORA</button>
           <button class="btn bghost" style="flex:1;min-width:120px" onclick="openAdmEdit()">✏ EDITAR CONFIG</button>
         </div>
         <div id="urladm" style="font-size:.68rem;font-weight:600;color:var(--tx2);margin-bottom:10px;word-break:break-all;letter-spacing:.04em;text-transform:uppercase;font-family:monospace">URL: chess-results.com/tnr1308555</div>
@@ -942,11 +950,43 @@ const TID='1308555';
 const pn=no=>{const p=PL.find(x=>x.no===no);return p?p.name.split(',')[0].trim():`#${no}`;};
 const pf=no=>{const p=PL.find(x=>x.no===no);return p?p.name:`#${no}`;};
 const pflag=no=>{const p=PL.find(x=>x.no===no);return p?.flag||'🇵🇾';};
-const FED_FLAGS={PAR:'🇵🇾',BRA:'🇧🇷',ARG:'🇦🇷',USA:'🇺🇸',RUS:'🇷🇺',GER:'🇩🇪',ESP:'🇪🇸',FRA:'🇫🇷',ITA:'🇮🇹',CHI:'🇨🇱',PER:'🇵🇪',COL:'🇨🇴',VEN:'🇻🇪',URU:'🇺🇾',BOL:'🇧🇴',MEX:'🇲🇽',POL:'🇵🇱',NED:'🇳🇱',HUN:'🇭🇺',IND:'🇮🇳',CHN:'🇨🇳',JPN:'🇯🇵'};
-const fedFlag=fed=>{if(!fed)return '';const k=(fed||'').replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,3);return FED_FLAGS[k]||fed;};
+const FED_FLAGS={
+  PAR:'PAR',BRA:'BRA',ARG:'ARG',USA:'USA',RUS:'RUS',
+  GER:'GER',ESP:'ESP',FRA:'FRA',ITA:'ITA',CHI:'CHI',
+  PER:'PER',COL:'COL',VEN:'VEN',URU:'URU',BOL:'BOL',
+  MEX:'MEX',POL:'POL',NED:'NED',HUN:'HUN',IND:'IND',
+  CHN:'CHN',JPN:'JPN',KOR:'KOR',POR:'POR',CZE:'CZE',
+  CRO:'CRO',SRB:'SRB',UKR:'UKR',ARM:'ARM',AZE:'AZE'
+};
+// Country colors for flag badges
+const FED_COLORS={
+  PAR:{bg:'#d52b1e',tx:'#fff'},  BRA:{bg:'#009c3b',tx:'#ffdf00'},
+  ARG:{bg:'#74acdf',tx:'#fff'},  USA:{bg:'#b22234',tx:'#fff'},
+  RUS:{bg:'#1c3578',tx:'#fff'},  GER:{bg:'#000',tx:'#ffce00'},
+  ESP:{bg:'#c60b1e',tx:'#ffc400'},FRA:{bg:'#002395',tx:'#fff'},
+  ITA:{bg:'#009246',tx:'#fff'},  CHI:{bg:'#d52b1e',tx:'#fff'},
+  PER:{bg:'#d91023',tx:'#fff'},  COL:{bg:'#fcd116',tx:'#003087'},
+  VEN:{bg:'#cf142b',tx:'#fff'},  URU:{bg:'#5aaafa',tx:'#fff'},
+  BOL:{bg:'#d52b1e',tx:'#ffdf00'},MEX:{bg:'#006847',tx:'#fff'},
+  POL:{bg:'#dc143c',tx:'#fff'},  NED:{bg:'#ae1c28',tx:'#fff'},
+  HUN:{bg:'#ce2939',tx:'#fff'},  IND:{bg:'#ff9933',tx:'#fff'},
+  CHN:{bg:'#de2910',tx:'#ffde00'},JPN:{bg:'#bc002d',tx:'#fff'},
+  KOR:{bg:'#003478',tx:'#fff'},  POR:{bg:'#006600',tx:'#fff'},
+  CZE:{bg:'#d7141a',tx:'#fff'},  CRO:{bg:'#ff0000',tx:'#fff'},
+  SRB:{bg:'#c6363c',tx:'#fff'},  UKR:{bg:'#005bbb',tx:'#ffd500'},
+  ARM:{bg:'#d90012',tx:'#fff'},  AZE:{bg:'#0092bc',tx:'#fff'}
+};
+const fedFlag=fed=>{
+  if(!fed)return '';
+  const k=(fed||'').replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,3);
+  const col=FED_COLORS[k];
+  const bg=col?col.bg:'#444';
+  const tx=col?col.tx:'#fff';
+  return \`<span class="fed-badge" style="background:\${bg};color:\${tx}">\${k||fed}</span>\`;
+};
 
 // ═══ STATE ════════════════════════════════════════════════
-let CU=null,allBets={},results={},locks={},settings={},liveR=DEMO,selChamp=null,authMode='login',prevRank=null,curR=1;
+let CU=null,allBets={},results={},locks={},settings={},liveR=DEMO,selChamp=null,authMode='login',prevRank=null,curR=1,_allPlayers=[];
 const isAdmin=()=>CU===ADMIN_USER;
 
 // ═══ FIREBASE ═════════════════════════════════════════════
@@ -956,7 +996,20 @@ document.addEventListener('fb',()=>{
   window._fb.onBets(d=>{allBets=d;tick();});
   window._fb.onResults(d=>{results=d;tick();});
   window._fb.onLocks(d=>{locks=d;tick();});
-  window._fb.onSettings(d=>{settings=d;tick();});
+  window._fb.onSettings(d=>{
+    settings=d;
+    // Restaurar jugadores guardados por SYNC TOTAL
+    if(d.players && Array.isArray(d.players) && d.players.length > 0) {
+      const sorted = [...d.players].sort((a,b)=>(b.elo||0)-(a.elo||0));
+      _allPlayers = sorted.map((p,i)=>({no:i+1,name:p.name,elo:p.elo,fed:p.fed,title:'',flag:''}));
+      PL.length = 0;
+      sorted.slice(0,16).forEach((p,i)=>{
+        PL.push({no:i+1,name:p.name,elo:p.elo,fed:p.fed,title:'',flag:''});
+      });
+      buildCGrid(); buildAdmSel();
+    }
+    tick();
+  });
   window._fb.onPairings(d=>{
     if(d&&Object.keys(d).length){
       const ld=[];
@@ -1220,23 +1273,25 @@ async function saveSnap(){
 let _standData = [];
 function renderStand() {
   if (_standData.length) { renderStandFromData(_standData); return; }
+  // Usar _allPlayers si fue sincronizado, sino PL (top-16 hardcoded)
+  const src = _allPlayers.length ? _allPlayers : PL;
   document.getElementById('standbox').innerHTML =
-    `<div style="border-left:3px solid var(--red);padding:8px 12px;background:var(--c2);font-size:.8rem;color:var(--grl);margin-bottom:9px">
-      Torneo inicia 27 Feb. Presioná <b>↻ SYNC</b> para traer los datos reales de chess-results.com
+    `<div style="border-left:3px solid var(--red);padding:8px 12px;background:var(--bg2);font-size:.8rem;color:var(--tx2);margin-bottom:9px">
+      Torneo no iniciado. Puntaje aparece cuando el admin sincronice rondas.
     </div>
-    <div class="stlist">${PL.map((p,i)=>`
+    <div class="stlist">${src.map((p,i)=>`
     <div class="strow">
       <div class="stpos${i<3?' top':''}">${i+1}</div>
-      <div><div class="stname">${p.flag||'🇵🇾'} ${p.name.split(',')[0]}</div><div class="stmeta">${p.fed}${p.title?' · '+p.title:''}</div></div>
-      <div class="stelo">${p.elo}</div>
-      <div class="stsc" style="color:var(--gr)">—</div>
+      <div><div class="stname">${fedFlag(p.fed)} ${p.name.split(',')[0]}</div><div class="stmeta">${p.fed}${p.title?' · '+p.title:''}</div></div>
+      <div class="stelo">${p.elo||'—'}</div>
+      <div class="stsc" style="color:var(--tx3)">—</div>
     </div>`).join('')}</div>`;
 }
 function renderStandFromData(stand) {
   _standData = stand;
   document.getElementById('standbox').innerHTML =
-    `<div style="border-left:3px solid var(--grn);padding:8px 12px;background:var(--c2);font-size:.8rem;color:var(--grl);margin-bottom:9px">
-      ✓ Datos en vivo de chess-results.com · ${new Date().toLocaleTimeString('es')}
+    `<div style="border-left:3px solid var(--grn);padding:8px 12px;background:var(--bg2);font-size:.8rem;color:var(--tx2);margin-bottom:9px;border-radius:0 var(--r2) var(--r2) 0">
+      ✓ En vivo · chess-results.com · ${stand.length} jugadores · ${new Date().toLocaleTimeString('es')}
     </div>
     <div class="stlist">${stand.map(p=>`
     <div class="strow">
@@ -1703,19 +1758,23 @@ async function doSyncInit() {
       throw new Error('No se encontraron jugadores suficientes');
     }
 
-    // Ordenar por ELO descendente, tomar los primeros 16
+    // Ordenar por ELO descendente
     players.sort((a,b) => b.elo - a.elo);
     const top16 = players.slice(0, 16);
 
-    // Actualizar PL en memoria con los datos reales
+    // Guardar TODOS los jugadores para la clasificación
+    _allPlayers = players.map((p, i) => ({
+      no: i+1, name: p.name, elo: p.elo, fed: p.fed, title: '', flag: ''
+    }));
+
+    // PL = top 16 por ELO para el selector de campeón
     PL.length = 0;
     top16.forEach((p, i) => {
-      const flag = fedFlag(p.fed);
-      PL.push({ no: i+1, name: p.name, elo: p.elo, fed: p.fed, title: '', flag });
+      PL.push({ no: i+1, name: p.name, elo: p.elo, fed: p.fed, title: '', flag: '' });
     });
 
     // Guardar en Firebase para persistencia
-    await window._fb.setSetting('players', top16.map(p => ({
+    await window._fb.setSetting('players', players.map(p => ({
       name: p.name, elo: p.elo, fed: p.fed
     })));
 
@@ -1725,19 +1784,18 @@ async function doSyncInit() {
     renderStand();
 
     // Mostrar resultado en el box
-    const rows = top16.map((p,i) =>
+    const rows = players.map((p,i) =>
       `<div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid var(--line)">
         <span style="color:var(--tx3);width:20px;text-align:right;font-size:.7rem">${i+1}</span>
-        <span style="min-width:16px">${fedFlag(p.fed)}</span>
+        <span>${fedFlag(p.fed)}</span>
         <span style="flex:1;font-family:var(--f-head);font-size:.82rem;text-transform:uppercase;color:var(--tx1)">${p.name}</span>
         <span style="color:var(--amber);font-size:.75rem;font-family:var(--f-head)">${p.elo||'—'}</span>
-        <span style="color:var(--tx3);font-size:.65rem;width:30px">${p.fed}</span>
       </div>`
     ).join('');
     if (box) box.innerHTML =
-      `<div style="color:#4ade80;font-weight:700;margin-bottom:6px">✅ ${top16.length} jugadores cargados · Orderados por ELO</div>` + rows;
+      `<div style="color:#4ade80;font-weight:700;margin-bottom:6px">✅ ${players.length} jugadores cargados · Top 16 por ELO para campeón</div>` + rows;
 
-    toast(`✅ ${top16.length} jugadores actualizados desde chess-results`);
+    toast(`✅ ${players.length} jugadores · ${top16.length} en selector campeón`);
 
   } catch(e) {
     if (box) box.innerHTML += `<div style="color:#e8001d;font-weight:700">✗ ERROR: ${e.message}</div>`;
@@ -1745,7 +1803,7 @@ async function doSyncInit() {
   }
 
   _syncInitRunning = false;
-  if (btn) { btn.disabled=false; btn.textContent='🏁 SYNC INICIAL AHORA'; }
+  if (btn) { btn.disabled=false; btn.textContent='🏁 SYNC TOTAL AHORA'; }
 }
 
 // ── SYNC PRINCIPAL ─────────────────────────────────────────
@@ -1809,24 +1867,26 @@ async function doSync() {
           continue;
         }
 
-        syncLog(`  R${rd}: ✓ ${games.length} partida(s) encontrada(s)`, 'ok');
-        totalPairs += games.length;
+        // Filtrar solo los primeros 10 tableros
+        const games10 = games.filter(g => g.board <= 10);
+        syncLog(`  R${rd}: ✓ ${games.length} partida(s) total · usando tableros 1-10 (${games10.length})`, 'ok');
+        totalPairs += games10.length;
         anyOk = true;
 
-        // Mostrar detalle de cada partida
-        games.forEach(g => {
+        // Mostrar detalle de cada partida (solo top 10)
+        games10.forEach(g => {
           const resLbl = g.result
             ? { white:`⬜ ${pn(g.white)} gana`, black:`⬛ ${pn(g.black)} gana`, draw:'🤝 Tablas' }[g.result]
             : `⏳ pendiente${g.resTxt ? ` (raw:"${g.resTxt}")` : ''}`;
           syncLog(`     Tbl.${g.board}: ${pn(g.white)} vs ${pn(g.black)} → ${resLbl}`);
         });
 
-        // Guardar emparejamientos en Firebase
-        const pairData = games.map(g=>({key:g.key, white:g.white, black:g.black, round:g.round}));
+        // Guardar emparejamientos en Firebase (solo top 10 tableros)
+        const pairData = games10.map(g=>({key:g.key, white:g.white, black:g.black, round:g.round}));
         await window._fb.setPairings(rd, pairData);
 
         // Aplicar resultados nuevos o corregidos
-        const withRes = games.filter(g => g.result !== null);
+        const withRes = games10.filter(g => g.result !== null);
         totalRes += withRes.length;
 
         for (const g of withRes) {
