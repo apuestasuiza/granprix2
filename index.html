@@ -788,14 +788,19 @@ select:focus{border-color:var(--grn)}
       <h2>⚙ CONFIGURACIÓN</h2>
       <button class="admclose" onclick="closeAdmEdit()">✕</button>
     </div>
-    <label class="flabel">URL torneo (chess-results)</label>
-    <input class="field" id="edit-url" placeholder="https://chess-results.com/tnr…" style="margin-bottom:12px">
+    <label class="flabel">URL o ID del torneo (chess-results)</label>
+    <input class="field" id="edit-url" placeholder="https://chess-results.com/tnr1308555.aspx  ó  1308555" style="margin-bottom:4px">
+    <div id="cur-tid" style="font-size:.72rem;color:var(--tx3);margin-bottom:12px;font-family:monospace">TID actual: <span id="tid-display">1308555</span></div>
     <label class="flabel">Registro de usuarios</label>
     <div class="rtoggle" id="rtbns">
       <button id="rbtn-open"   class="btn bghost bfull" onclick="setRegEdit(true)">🟢 ABIERTO</button>
       <button id="rbtn-closed" class="btn bghost bfull" onclick="setRegEdit(false)">🔒 CERRADO</button>
     </div>
-    <button class="btn bprimary" onclick="saveAdmEdit()">GUARDAR →</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px">
+  <button class="btn bprimary" style="flex:1;min-width:100px" onclick="saveAdmEdit()">✓ GUARDAR</button>
+  <button class="btn" style="flex:1;min-width:150px;background:var(--amber);color:#000;font-weight:700" onclick="saveAdmEdit().then(()=>setTimeout(doSyncInit,500))">🏁 GUARDAR + SYNC TOTAL</button>
+  <button class="btn bghost" style="flex:1;min-width:150px" onclick="saveAdmEdit().then(()=>setTimeout(doSync,500))">↻ GUARDAR + SYNC RONDAS</button>
+</div>
     <div id="editmsg" style="font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;color:var(--grn);margin-top:9px;min-height:14px;text-transform:uppercase"></div>
   </div>
 </div>
@@ -946,7 +951,7 @@ const DEMO=[
 DEMO.forEach(rd=>{ rd.games=rd.games.map(g=>({key:`r${rd.r}_w${g.w}_b${g.b}`,white:g.w,black:g.b,round:rd.r})); });
 
 const ADMIN_USER='admin'; // ← cambiá si querés otro nombre de admin
-const TID='1308555';
+let TID='1308555';
 const pn=no=>{const p=PL.find(x=>x.no===no);return p?p.name.split(',')[0].trim():`#${no}`;};
 const pf=no=>{const p=PL.find(x=>x.no===no);return p?p.name:`#${no}`;};
 // pnt = title prefix + last name: "FM Cantero", "Viñales" (no title)
@@ -1000,13 +1005,15 @@ document.addEventListener('fb',()=>{
   window._fb.onLocks(d=>{locks=d;tick();});
   window._fb.onSettings(d=>{
     settings=d;
+    // Aplicar URL de torneo guardada
+    if(d.crUrl) applyCrUrl(d.crUrl);
     // Restaurar jugadores guardados por SYNC TOTAL
     if(d.players && Array.isArray(d.players) && d.players.length > 0) {
       const sorted = [...d.players].sort((a,b)=>(b.elo||0)-(a.elo||0));
-      _allPlayers = sorted.map((p,i)=>({no:i+1,name:p.name,elo:p.elo,fed:p.fed,title:'',flag:''}));
+      _allPlayers = sorted.map((p,i)=>({no:i+1,name:p.name,elo:p.elo,fed:p.fed,title:p.title||'',flag:''}));
       PL.length = 0;
       sorted.slice(0,16).forEach((p,i)=>{
-        PL.push({no:i+1,name:p.name,elo:p.elo,fed:p.fed,title:'',flag:''});
+        PL.push({no:i+1,name:p.name,elo:p.elo,fed:p.fed,title:p.title||'',flag:''});
       });
       buildCGrid(); buildAdmSel();
     }
@@ -1018,7 +1025,7 @@ document.addEventListener('fb',()=>{
       Object.entries(d).forEach(([rk,gs])=>{
         const rn=parseInt(rk.replace('r',''));if(!gs)return;
         const ga=Array.isArray(gs)?gs:Object.values(gs);
-        ld.push({r:rn,date:RDATES[rn]||'',games:ga.map(g=>({key:g.key||`r${rn}_w${g.white}_b${g.black}`,white:g.white,black:g.black,round:rn}))});
+        ld.push({r:rn,date:RDATES[rn]||'',games:ga.map((g,i)=>({key:g.key||`r${rn}_w${g.white}_b${g.black}`,white:g.white,black:g.black,round:rn,board:g.board||(i+1)}))});
       });
       if(ld.length)liveR=ld.sort((a,b)=>a.r-b.r);
     }
@@ -1181,11 +1188,11 @@ function matchCard(g,rlk){
     rbar=`<div class="rbar ${cls}">${txt}${verd?' &nbsp;·&nbsp; '+verd:''}</div>`;
   }
   return`<div class="pair${myP?' hpred':''}${cor?' cor':''}${wr?' wr':''}"><div class="pinner">
-    <div class="brow"><span class="bnum">Tablero ${g.board} &middot; Ronda ${g.round}</span><span class="rtag ${rc}">${rl}</span></div>
+    <div class="brow"><span class="bnum">Tablero ${g.board||((liveR.find(r=>r.r===g.round)?.games.indexOf(g)??-1)+1)||'?'} &middot; Ronda ${g.round}</span><span class="rtag ${rc}">${rl}</span></div>
     <div class="mrow">
-      <div class="ps"><div class="pn">${wfl} ${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span>${wfed?'<span style="font-size:.62rem;color:var(--tx3);font-weight:600;margin-left:3px">'+wfed+'</span>':''}</div></div>
+      <div class="ps"><div class="pn">${wl}</div><div class="psub"><span class="pip pipw"></span><span class="pelo">${we}</span><span style="margin-left:4px">${wfl}</span></div></div>
       <div class="vs">vs</div>
-      <div class="ps r"><div class="pn">${bfl} ${bl}</div><div class="psub">${bfed?'<span style="font-size:.62rem;color:var(--tx3);font-weight:600;margin-right:3px">'+bfed+'</span>':''}<span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
+      <div class="ps r"><div class="pn">${bl}</div><div class="psub"><span style="margin-right:4px">${bfl}</span><span class="pelo">${be}</span><span class="pip pipb"></span></div></div>
     </div>
     <div class="plabel">Tu predicción</div>
     <div class="prow">
@@ -1363,7 +1370,7 @@ async function adminToggleReg(open){if(!confirm(`¿${open?'Abrir':'Cerrar'} el r
 async function adminReset(){if(!confirm('⚠ ¿BORRAR TODO? Irreversible.'))return;await window._fb.resetAll();toast('TODO RESETEADO.');}
 
 let _editRegO=null;
-function openAdmEdit(){if(!isAdmin())return;document.getElementById('admModal').style.display='flex';document.getElementById('edit-url').value=settings.crUrl||'';_editRegO=settings.registrationOpen!==false;refreshRBtns();document.getElementById('editmsg').textContent='';}
+function openAdmEdit(){if(!isAdmin())return;document.getElementById('admModal').style.display='flex';document.getElementById('edit-url').value=settings.crUrl||'';const td=document.getElementById('tid-display');if(td)td.textContent=TID;_editRegO=settings.registrationOpen!==false;refreshRBtns();document.getElementById('editmsg').textContent='';}
 function closeAdmEdit(){document.getElementById('admModal').style.display='none';}
 function setRegEdit(v){_editRegO=v;refreshRBtns();}
 function refreshRBtns(){
@@ -1371,16 +1378,22 @@ function refreshRBtns(){
   ob.style.borderColor=_editRegO?'var(--grn)':'';ob.style.color=_editRegO?'var(--grn)':'';
   cb.style.borderColor=!_editRegO?'var(--red)':'';cb.style.color=!_editRegO?'var(--red)':'';
 }
-async function saveAdmEdit(){
+async async function saveAdmEdit(){
   const url=document.getElementById('edit-url').value.trim();
-  await window._fb.setSetting('crUrl',url||null);await window._fb.setSetting('registrationOpen',_editRegO!==false);
-  document.getElementById('editmsg').textContent='✓ GUARDADO';setTimeout(closeAdmEdit,900);toast('✓ CONFIGURACIÓN GUARDADA');
+  await window._fb.setSetting('crUrl',url||null);
+  await window._fb.setSetting('registrationOpen',_editRegO!==false);
+  if(url) applyCrUrl(url);
+  renderAdmSettings();
+  const msg=document.getElementById('editmsg');
+  msg.textContent='✓ GUARDADO';
+  toast('✓ URL guardada · TID: '+TID);
+  setTimeout(()=>{ closeAdmEdit(); }, 700);
 }
 function renderAdmSettings(){
   const io=settings.registrationOpen!==false;
   const re=document.getElementById('regstadm');const le=document.getElementById('urladm');
   if(re)re.innerHTML=io?'<span class="lkbadge open">🟢 REGISTRO ABIERTO</span>':'<span class="lkbadge locked">🔒 REGISTRO CERRADO</span>';
-  if(le)le.textContent='URL: chess-results.com/tnr'+TID+(settings.crUrl?' (custom)':'');
+  if(le)le.textContent='chess-results.com/tnr'+TID+(settings.crUrl?' · custom':'· default');const td=document.getElementById('tid-display');if(td)td.textContent=TID;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1389,7 +1402,14 @@ function renderAdmSettings(){
 // y resultados directamente del HTML de chess-results.com
 // ═══════════════════════════════════════════════════════════
 
-const CR_BASE = `https://chess-results.com/tnr${TID}.aspx`;
+let CR_BASE = `https://chess-results.com/tnr${TID}.aspx`;
+function applyCrUrl(url){
+  if(!url)return;
+  // Accept full URL like https://chess-results.com/tnr1234567.aspx or just the TID
+  const m=url.match(/tnr(\d+)/i);
+  if(m){ TID=m[1]; CR_BASE=`https://chess-results.com/tnr${TID}.aspx`; }
+  else if(/^\d+$/.test(url.trim())){ TID=url.trim(); CR_BASE=`https://chess-results.com/tnr${TID}.aspx`; }
+}
 const MAX_RDS = 7;
 
 // Proxies CORS — se prueban en orden hasta que uno responde
@@ -1805,7 +1825,7 @@ async function doSyncInit() {
 
     // Guardar TODOS los jugadores para la clasificación
     _allPlayers = players.map((p, i) => ({
-      no: i+1, name: p.name, elo: p.elo, fed: p.fed, title: '', flag: ''
+      no: i+1, name: p.name, elo: p.elo, fed: p.fed, title: p.title||'', flag: ''
     }));
 
     // PL = top 16 por ELO para el selector de campeón
@@ -1816,7 +1836,7 @@ async function doSyncInit() {
 
     // Guardar en Firebase para persistencia
     await window._fb.setSetting('players', players.map(p => ({
-      name: p.name, elo: p.elo, fed: p.fed
+      name: p.name, elo: p.elo, fed: p.fed, title: p.title||''
     })));
 
     // Reconstruir selectores con datos actualizados
@@ -1923,7 +1943,7 @@ async function doSync() {
         });
 
         // Guardar emparejamientos en Firebase (solo top 10 tableros)
-        const pairData = games10.map(g=>({key:g.key, white:g.white, black:g.black, round:g.round}));
+        const pairData = games10.map(g=>({key:g.key, white:g.white, black:g.black, round:g.round, board:g.board}));
         await window._fb.setPairings(rd, pairData);
 
         // Aplicar resultados nuevos o corregidos
