@@ -5,44 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FRONTIER PREDICTOR 2026</title>
 
+<!-- ⚠️ ÚNICA CONFIGURACIÓN DE FIREBASE - FUNCIONANDO -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  // ⚠️ REEMPLAZÁ con tu propia config de Firebase Realtime Database
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  // ✅ CONFIGURACIÓN REAL DE FIREBASE (GRANPRIX2)
   const cfg = {
-    apiKey:"TU_API_KEY",
-    authDomain:"TU_PROYECTO.firebaseapp.com",
-    databaseURL:"https://TU_PROYECTO-default-rtdb.firebaseio.com",
-    projectId:"TU_PROYECTO",
-    storageBucket:"TU_PROYECTO.firebasestorage.app",
-    messagingSenderId:"TU_SENDER_ID",
-    appId:"TU_APP_ID"
+    apiKey: "AIzaSyAZuzubERirYKoz5FbKPrKv4Z0T9eWpjEg",
+    authDomain: "granprix2-b935d.firebaseapp.com",
+    databaseURL: "https://granprix2-b935d-default-rtdb.firebaseio.com",
+    projectId: "granprix2-b935d",
+    storageBucket: "granprix2-b935d.firebasestorage.app",
+    messagingSenderId: "642221025518",
+    appId: "1:642221025518:web:a3d0e40c940418a17bebff"
   };
-  const db=getDatabase(initializeApp(cfg));
-  const r=p=>ref(db,p);
-  window._fb={
-    getUser:     async u=>(await get(r(`users/${u}`))).val(),
-    createUser:  (u,h)=>set(r(`users/${u}`),{hash:h,created:Date.now()}),
-    setChampBet: (u,p)=>set(r(`bets/${u}/champion`),{player:p,ts:Date.now()}),
-    setMatchBet: (u,k,pk)=>set(r(`bets/${u}/matches/${k}`),{pick:pk,ts:Date.now()}),
-    onBets:      cb=>onValue(r('bets'),s=>cb(s.val()||{})),
-    setChampResult: p=>set(r('results/champion'),p),
-    setMatchResult: (k,v)=>set(r(`results/matches/${k}`),v),
-    onResults:   cb=>onValue(r('results'),s=>cb(s.val()||{})),
-    setRoundLock:(rn,l)=>set(r(`locks/rounds/${rn}`),l),
-    setChampLock:l=>set(r('locks/champion'),l),
-    onLocks:     cb=>onValue(r('locks'),s=>cb(s.val()||{})),
-    resetAll:    ()=>Promise.all([set(r('bets'),null),set(r('results'),null),set(r('locks'),null),set(r('snapshots'),null)]),
-    saveSnapshot:snap=>set(r('snapshots/prev'),snap),
-    onSnapshot:  cb=>onValue(r('snapshots/prev'),s=>cb(s.val()||null)),
-    onSettings:  cb=>onValue(r('settings'),s=>cb(s.val()||{})),
-    setSetting:  (k,v)=>set(r(`settings/${k}`),v),
-    setPairings: (rn,d)=>set(r(`pairings/r${rn}`),d),
-    onPairings:  cb=>onValue(r('pairings'),s=>cb(s.val()||{})),
+
+  const app = initializeApp(cfg);
+  const db = getDatabase(app);
+  const r = p => ref(db, p);
+  
+  window._fb = {
+    getUser:        async u => (await get(r(`users/${u}`))).val(),
+    createUser:     (u, h) => set(r(`users/${u}`), { hash: h, created: Date.now() }),
+    setChampBet:    (u, p) => set(r(`bets/${u}/champion`), { player: p, ts: Date.now() }),
+    setMatchBet:    (u, k, pk) => set(r(`bets/${u}/matches/${k}`), { pick: pk, ts: Date.now() }),
+    onBets:         cb => onValue(r('bets'), s => cb(s.val() || {})),
+    setChampResult: p => set(r('results/champion'), p),
+    setMatchResult: (k, v) => set(r(`results/matches/${k}`), v),
+    onResults:      cb => onValue(r('results'), s => cb(s.val() || {})),
+    setRoundLock:   (rn, l) => set(r(`locks/rounds/${rn}`), l),
+    setChampLock:   l => set(r('locks/champion'), l),
+    onLocks:        cb => onValue(r('locks'), s => cb(s.val() || {})),
+    resetAll:       () => Promise.all([
+      set(r('bets'), null),
+      set(r('results'), null),
+      set(r('locks'), null),
+      set(r('snapshots'), null)
+    ]),
+    saveSnapshot:   snap => set(r('snapshots/prev'), snap),
+    onSnapshot:     cb => onValue(r('snapshots/prev'), s => cb(s.val() || null)),
+    onSettings:     cb => onValue(r('settings'), s => cb(s.val() || {})),
+    setSetting:     (k, v) => set(r(`settings/${k}`), v),
+    setPairings:    (rn, d) => set(r(`pairings/r${rn}`), d),
+    onPairings:     cb => onValue(r('pairings'), s => cb(s.val() || {})),
   };
-  window._fbReady=true;
+
+  window._fbReady = true;
   document.dispatchEvent(new Event('fb'));
+  console.log("✅ Firebase conectado (granprix2)");
 </script>
+
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -1615,22 +1628,6 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 
 // Auto-sync cada 3 minutos (solo si Firebase está listo y hay sesión)
 setInterval(()=>{ if(window._fbReady && CU) doSync(); }, 3*60*1000);
-</script>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAZuzubERirYKoz5FbKPrKv4Z0T9eWpjEg",
-    authDomain: "granprix2-b935d.firebaseapp.com",
-    projectId: "granprix2-b935d",
-    storageBucket: "granprix2-b935d.firebasestorage.app",
-    messagingSenderId: "642221025518",
-    appId: "1:642221025518:web:a3d0e40c940418a17bebff"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  console.log("Firebase inicializado", app);
 </script>
 
 </body>
